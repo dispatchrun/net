@@ -1,5 +1,3 @@
-//go:build wasip1
-
 package net
 
 import (
@@ -9,6 +7,9 @@ import (
 
 	"github.com/stealthrocket/net/syscall"
 )
+
+// Conn is a generic stream-oriented network connection.
+type Conn = net.Conn
 
 // Dial connects to the address on the named network.
 func Dial(network, address string) (Conn, error) {

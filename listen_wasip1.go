@@ -1,5 +1,3 @@
-//go:build wasip1
-
 package net
 
 import (
@@ -9,6 +7,9 @@ import (
 
 	"github.com/stealthrocket/net/syscall"
 )
+
+// A Listener is a generic network listener for stream-oriented protocols.
+type Listener = net.Listener
 
 // Listen announces on the local network address.
 func Listen(network, address string) (Listener, error) {
