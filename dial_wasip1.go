@@ -120,14 +120,12 @@ func family(addr net.Addr) int {
 	case *net.IPAddr:
 		ip = a.IP
 	}
-	switch len(ip) {
-	case net.IPv4len:
+	if ip.To4() != nil {
 		return syscall.AF_INET
-	case net.IPv6len:
+	} else if len(ip) == net.IPv6len {
 		return syscall.AF_INET6
-	default:
-		panic("invalid IP address")
 	}
+	return syscall.AF_INET
 }
 
 func socketType(addr net.Addr) int {
@@ -154,12 +152,10 @@ func socketAddress(addr net.Addr) syscall.Sockaddr {
 	case *net.IPAddr:
 		ip = a.IP
 	}
-	switch len(ip) {
-	case net.IPv4len:
-		return &syscall.SockaddrInet4{Addr: ([4]byte)(ip), Port: port}
-	case net.IPv6len:
+	if ipv4 := ip.To4(); ipv4 != nil {
+		return &syscall.SockaddrInet4{Addr: ([4]byte)(ipv4), Port: port}
+	} else if len(ip) == net.IPv6len {
 		return &syscall.SockaddrInet6{Addr: ([16]byte)(ip), Port: port}
-	default:
-		panic("invalid IP address")
 	}
+	panic("not implemented")
 }
