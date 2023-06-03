@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 
 	"github.com/stealthrocket/net/syscall"
@@ -11,6 +12,10 @@ import (
 
 func init() {
 	net.DefaultResolver.Dial = DialContext
+
+	if t, ok := http.DefaultTransport.(*http.Transport); ok {
+		t.DialContext = DialContext
+	}
 }
 
 // Conn is a generic stream-oriented network connection.
