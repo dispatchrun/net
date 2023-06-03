@@ -1,6 +1,7 @@
 package net
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -8,20 +9,30 @@ import (
 	"github.com/stealthrocket/net/syscall"
 )
 
+func init() {
+	net.DefaultResolver.Dial = DialContext
+}
+
 // Conn is a generic stream-oriented network connection.
 type Conn = net.Conn
 
 // Dial connects to the address on the named network.
 func Dial(network, address string) (Conn, error) {
-	family, addr, err := lookupAddr("dial", network, address)
+	addr, err := lookupAddr("dial", network, address)
 	if err != nil {
 		return nil, err
 	}
-	return dialAddr(family, addr)
+	return dialAddr(addr)
 }
 
-func dialAddr(family int, addr syscall.Sockaddr) (Conn, error) {
-	fd, err := syscall.Socket(family, syscall.SOCK_STREAM, 0)
+// DialContext is a variant of Dial that accepts a context.
+func DialContext(ctx context.Context, network, address string) (Conn, error) {
+	_ = ctx // TODO
+	return Dial(network, address)
+}
+
+func dialAddr(addr net.Addr) (Conn, error) {
+	fd, err := syscall.Socket(family(addr), socketType(addr), 0)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +43,7 @@ func dialAddr(family int, addr syscall.Sockaddr) (Conn, error) {
 	}
 
 	var inProgress bool
-	switch err := syscall.Connect(fd, addr); err {
+	switch err := syscall.Connect(fd, socketAddress(addr)); err {
 	case nil:
 	case syscall.EINPROGRESS:
 		inProgress = true
@@ -85,4 +96,60 @@ func dialAddr(family int, addr syscall.Sockaddr) (Conn, error) {
 	// TODO: get local+peer address; wrap FileConn to implement LocalAddr() and RemoteAddr()
 
 	return c, nil
+}
+
+func family(addr net.Addr) int {
+	var ip net.IP
+	switch a := addr.(type) {
+	case *net.UnixAddr:
+		panic("not implemented")
+	case *net.TCPAddr:
+		ip = a.IP
+	case *net.UDPAddr:
+		ip = a.IP
+	case *net.IPAddr:
+		ip = a.IP
+	}
+	switch len(ip) {
+	case net.IPv4len:
+		return syscall.AF_INET
+	case net.IPv6len:
+		return syscall.AF_INET6
+	default:
+		panic("invalid IP address")
+	}
+}
+
+func socketType(addr net.Addr) int {
+	switch addr.Network() {
+	case "tcp", "unix":
+		return syscall.SOCK_STREAM
+	case "udp", "unixgram":
+		return syscall.SOCK_DGRAM
+	default:
+		panic("not implemented")
+	}
+}
+
+func socketAddress(addr net.Addr) syscall.Sockaddr {
+	var ip net.IP
+	var port int
+	switch a := addr.(type) {
+	case *net.UnixAddr:
+		panic("not implemented")
+	case *net.TCPAddr:
+		ip, port = a.IP, a.Port
+	case *net.UDPAddr:
+		ip, port = a.IP, a.Port
+	case *net.IPAddr:
+		ip = a.IP
+	}
+	switch len(ip) {
+	case net.IPv4len:
+		return &syscall.SockaddrInet4{Addr: ([4]byte)(ip), Port: port}
+	case net.IPv6len:
+		return &syscall.SockaddrInet6{Addr: ([16]byte)(ip), Port: port}
+	default:
+		panic("invalid IP address")
+	}
 }

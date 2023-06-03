@@ -10,24 +10,6 @@ const (
 	FDFLAG_NONBLOCK = 0x4
 )
 
-type uintptr32 = uint32
-
-type iovec struct {
-	buf    uintptr32
-	bufLen size
-}
-
-func bytesPointer(b []byte) unsafe.Pointer {
-	return unsafe.Pointer(unsafe.SliceData(b))
-}
-
-func makeIOVec(b []byte) unsafe.Pointer {
-	return unsafe.Pointer(&iovec{
-		buf:    uintptr32(uintptr(bytesPointer(b))),
-		bufLen: size(len(b)),
-	})
-}
-
 func Close(fd int) error {
 	errno := fd_close(int32(fd))
 	return errnoErr(errno)

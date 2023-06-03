@@ -13,15 +13,15 @@ type Listener = net.Listener
 
 // Listen announces on the local network address.
 func Listen(network, address string) (Listener, error) {
-	family, addr, err := lookupAddr("listen", network, address)
+	addr, err := lookupAddr("listen", network, address)
 	if err != nil {
 		return nil, err
 	}
-	return listenAddr(family, addr)
+	return listenAddr(addr)
 }
 
-func listenAddr(family int, addr syscall.Sockaddr) (Listener, error) {
-	fd, err := syscall.Socket(family, syscall.SOCK_STREAM, 0)
+func listenAddr(addr net.Addr) (Listener, error) {
+	fd, err := syscall.Socket(family(addr), socketType(addr), 0)
 	if err != nil {
 		return nil, fmt.Errorf("Socket: %w", err)
 	}
@@ -35,7 +35,7 @@ func listenAddr(family int, addr syscall.Sockaddr) (Listener, error) {
 		return nil, err
 	}
 
-	if err := syscall.Bind(fd, addr); err != nil {
+	if err := syscall.Bind(fd, socketAddress(addr)); err != nil {
 		syscall.Close(fd)
 		return nil, fmt.Errorf("Bind: %w", err)
 	}
