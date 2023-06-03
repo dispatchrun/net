@@ -53,10 +53,23 @@ func listenAddr(addr net.Addr) (Listener, error) {
 	if err != nil {
 		return nil, err
 	}
+	return &listener{l, addr}, err
+}
 
-	// TODO: get local address; wrap FileListener to implement Addr().
-	//  Wrap the net.Conn returned by Accept() to implement LocalAddr() and
-	//  RemoteAddr()
+type listener struct {
+	Listener
+	addr net.Addr
+}
 
-	return l, err
+func (l *listener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	// TODO: get local+peer address; wrap Conn to implement LocalAddr() and RemoteAddr()
+	return c, nil
+}
+
+func (l *listener) Addr() net.Addr {
+	return l.addr
 }
