@@ -31,8 +31,6 @@ const (
 	SO_ERROR
 )
 
-type uintptr32 = uint32
-
 type Sockaddr interface {
 	sockaddr() (unsafe.Pointer, error)
 	sockport() int
@@ -88,6 +86,9 @@ func (s *SockaddrUnix) sockport() int {
 	return 0
 }
 
+type uintptr32 = uint32
+type size = uint32
+
 type addressBuffer struct {
 	buf    uintptr32
 	bufLen size
@@ -97,6 +98,30 @@ type RawSockaddrAny struct {
 	family uint16
 	addr   [126]byte
 }
+
+//go:wasmimport wasi_snapshot_preview1 sock_open
+func sock_open(af int32, socktype int32, fd unsafe.Pointer) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_bind
+func sock_bind(fd int32, addr unsafe.Pointer, port uint32) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_listen
+func sock_listen(fd int32, backlog int32) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_connect
+func sock_connect(fd int32, addr unsafe.Pointer, port uint32) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_getsockopt
+func sock_getsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_setsockopt
+func sock_setsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_getlocaladdr
+func sock_getlocaladdr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_getpeeraddr
+func sock_getpeeraddr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
 
 func Socket(proto, sotype, unused int) (fd int, err error) {
 	var newfd int32
