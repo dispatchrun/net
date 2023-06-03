@@ -71,7 +71,7 @@ import (
 )
 
 func main() {
-    listener, err := net.Listen("tcp", "localhost:8080")
+    listener, err := net.Listen("tcp", "127.0.0.1:8080")
     if err != nil {
         // TODO: handle listen error
     }
