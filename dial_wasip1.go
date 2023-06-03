@@ -32,7 +32,10 @@ func DialContext(ctx context.Context, network, address string) (Conn, error) {
 }
 
 func dialAddr(addr net.Addr) (Conn, error) {
-	fd, err := syscall.Socket(family(addr), socketType(addr), 0)
+	proto := family(addr)
+	sotype := socketType(addr)
+
+	fd, err := syscall.Socket(proto, sotype, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +43,13 @@ func dialAddr(addr net.Addr) (Conn, error) {
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		syscall.Close(fd)
 		return nil, fmt.Errorf("SetNonblock: %w", err)
+	}
+
+	if sotype == syscall.SOCK_DGRAM && proto != syscall.AF_UNIX {
+		if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_BROADCAST, 1); err != nil {
+			syscall.Close(fd)
+			return nil, err
+		}
 	}
 
 	var inProgress bool
@@ -102,7 +112,7 @@ func family(addr net.Addr) int {
 	var ip net.IP
 	switch a := addr.(type) {
 	case *net.UnixAddr:
-		panic("not implemented")
+		return syscall.AF_UNIX
 	case *net.TCPAddr:
 		ip = a.IP
 	case *net.UDPAddr:
@@ -136,7 +146,7 @@ func socketAddress(addr net.Addr) syscall.Sockaddr {
 	var port int
 	switch a := addr.(type) {
 	case *net.UnixAddr:
-		panic("not implemented")
+		return &syscall.SockaddrUnix{Name: a.Name}
 	case *net.TCPAddr:
 		ip, port = a.IP, a.Port
 	case *net.UDPAddr:

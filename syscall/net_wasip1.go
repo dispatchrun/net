@@ -13,6 +13,7 @@ const (
 	_ = iota
 	AF_INET
 	AF_INET6
+	AF_UNIX
 )
 
 const (
@@ -29,6 +30,8 @@ const (
 	SO_REUSEADDR = iota
 	_
 	SO_ERROR
+	_
+	SO_BROADCAST
 )
 
 type Sockaddr interface {

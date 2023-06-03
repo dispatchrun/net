@@ -7,7 +7,8 @@ import (
 
 func lookupAddr(context, network, address string) (net.Addr, error) {
 	switch network {
-	case "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6":
+	case "tcp", "tcp4", "tcp6":
+	case "udp", "udp4", "udp6":
 	case "unix", "unixgram":
 		return &net.UnixAddr{Name: address, Net: network}, nil
 	default:
@@ -50,5 +51,19 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("no route to host: %v", host)
+	if network == "udp" || network == "udp4" {
+		for _, ip := range ips {
+			if len(ip) == net.IPv4len {
+				return &net.UDPAddr{IP: ip, Port: port}, nil
+			}
+		}
+	}
+	if network == "udp" || network == "udp6" {
+		for _, ip := range ips {
+			if len(ip) == net.IPv6len {
+				return &net.UDPAddr{IP: ip, Port: port}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("cannot listen on %q", host)
 }
