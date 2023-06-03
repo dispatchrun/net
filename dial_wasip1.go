@@ -67,7 +67,7 @@ func dialAddr(addr net.Addr) (Conn, error) {
 				return true // done
 			}
 			switch syscall.Errno(value) {
-			case syscall.EINPROGRESS, syscall.EALREADY, syscall.EINTR:
+			case syscall.EINPROGRESS, syscall.EINTR:
 				return false // continue
 			case syscall.EISCONN:
 				err = nil
