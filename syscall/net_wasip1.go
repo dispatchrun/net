@@ -306,7 +306,7 @@ func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int,
 			ai_canonnamelen: uint32(unsafe.Sizeof(AddrInfo{}.cannoname)),
 		}
 		if i > 0 {
-			results[i-1].addrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i-1])))
+			results[i-1].addrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i-1].addrInfo)))
 		}
 	}
 

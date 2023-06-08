@@ -20,15 +20,15 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 	default:
 		return nil, fmt.Errorf("not implemented: %s", network)
 	}
-	host, portstr, err := net.SplitHostPort(address)
+	hostname, service, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, err
 	}
-	port, err := net.LookupPort(network, portstr)
+	port, err := net.LookupPort(network, service)
 	if err != nil {
 		return nil, err
 	}
-	if host == "" {
+	if hostname == "" {
 		if context == "listen" {
 			switch network {
 			case "tcp", "tcp4":
@@ -39,7 +39,7 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 		}
 		return nil, fmt.Errorf("invalid address %q for %s", address, context)
 	}
-	ips, err := net.LookupIP(host)
+	ips, err := net.LookupIP(hostname)
 	if err != nil {
 		return nil, err
 	}
@@ -71,5 +71,5 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("cannot listen on %q", host)
+	return nil, fmt.Errorf("lookup failed: %q", address)
 }
