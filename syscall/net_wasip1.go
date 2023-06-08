@@ -117,30 +117,39 @@ type RawSockaddrAny struct {
 }
 
 //go:wasmimport wasi_snapshot_preview1 sock_open
+//go:noescape
 func sock_open(af int32, socktype int32, fd unsafe.Pointer) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_bind
+//go:noescape
 func sock_bind(fd int32, addr unsafe.Pointer, port uint32) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_listen
+//go:noescape
 func sock_listen(fd int32, backlog int32) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_connect
+//go:noescape
 func sock_connect(fd int32, addr unsafe.Pointer, port uint32) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getsockopt
+//go:noescape
 func sock_getsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_setsockopt
+//go:noescape
 func sock_setsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getlocaladdr
+//go:noescape
 func sock_getlocaladdr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getpeeraddr
+//go:noescape
 func sock_getpeeraddr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getaddrinfo
+//go:noescape
 func sock_getaddrinfo(
 	node unsafe.Pointer,
 	nodeLen uint32,

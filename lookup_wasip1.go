@@ -61,5 +61,5 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 			return &net.UDPAddr{IP: ip, Port: port}, nil
 		}
 	}
-	return nil, fmt.Errorf("lookup failed: %q", address)
+	return nil, &net.DNSError{Err: "lookup failed", Name: hostname, IsNotFound: true}
 }

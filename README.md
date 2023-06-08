@@ -9,7 +9,7 @@ and [stealthrocket/wasi-go](https://github.com/stealthrocket/wasi-go).
 ## Dialing
 
 The library will automatically configure the default HTTP transport
-to use the `Dial` function from this library
+to use the `Dial` function from this library.
 
 To make outbound HTTP connections you just need the following import somewhere:
 
