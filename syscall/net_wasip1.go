@@ -5,19 +5,20 @@
 package syscall
 
 import (
+	"encoding/binary"
 	"runtime"
 	"unsafe"
 )
 
 const (
-	_ = iota
+	AF_UNSPEC = iota
 	AF_INET
 	AF_INET6
 	AF_UNIX
 )
 
 const (
-	_ = iota
+	SOCK_ANY = iota
 	SOCK_DGRAM
 	SOCK_STREAM
 )
@@ -32,6 +33,19 @@ const (
 	SO_ERROR
 	_
 	SO_BROADCAST
+)
+
+const (
+	AI_PASSIVE = 1 << iota
+	_
+	AI_NUMERICHOST
+	AI_NUMERICSERV
+)
+
+const (
+	IPPROTO_IP = iota
+	IPPROTO_TCP
+	IPPROTO_UDP
 )
 
 type Sockaddr interface {
@@ -126,6 +140,18 @@ func sock_getlocaladdr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
 //go:wasmimport wasi_snapshot_preview1 sock_getpeeraddr
 func sock_getpeeraddr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
 
+//go:wasmimport wasi_snapshot_preview1 sock_getaddrinfo
+func sock_getaddrinfo(
+	node unsafe.Pointer,
+	nodeLen uint32,
+	service unsafe.Pointer,
+	serviceLen uint32,
+	hints unsafe.Pointer,
+	res unsafe.Pointer,
+	maxResLen uint32,
+	resLen unsafe.Pointer,
+) uint32
+
 func Socket(proto, sotype, unused int) (fd int, err error) {
 	var newfd int32
 	errno := sock_open(int32(proto), int32(sotype), unsafe.Pointer(&newfd))
@@ -210,4 +236,113 @@ func anyToSockaddr(rsa *RawSockaddrAny, port int) (Sockaddr, error) {
 	default:
 		return nil, ENOTSUP
 	}
+}
+
+// https://github.com/WasmEdge/WasmEdge/blob/434e1fb4690/thirdparty/wasi/api.hpp#L1885
+type addrInfo struct {
+	ai_flags        uint16
+	ai_family       uint8
+	ai_socktype     uint8
+	ai_protocol     uint32
+	ai_addrlen      uint32
+	ai_addr         uintptr32 // *sockAddr
+	ai_canonname    uintptr32 // null-terminated string
+	ai_canonnamelen uint32
+	ai_next         uintptr32 // *addrInfo
+}
+
+type sockAddr struct {
+	sa_family   uint32
+	sa_data_len uint32
+	sa_data     uintptr32
+	_           [4]byte
+}
+
+type AddrInfo struct {
+	Flags         int
+	Family        int
+	SocketType    int
+	Protocol      int
+	Address       Sockaddr
+	CanonicalName string
+
+	addrInfo
+	sockAddr
+	sockData  [26]byte
+	cannoname [30]byte
+	inet4addr SockaddrInet4
+	inet6addr SockaddrInet6
+}
+
+func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int, error) {
+	// For compatibility with WasmEdge, make sure strings are null-terminated.
+	if len(name) > 0 && name[len(name)-1] != 0 {
+		name = string(append([]byte(name), 0))
+	}
+	if len(service) > 0 && service[len(service)-1] != 0 {
+		service = string(append([]byte(service), 0))
+	}
+
+	hints.addrInfo = addrInfo{
+		ai_flags:    uint16(hints.Flags),
+		ai_family:   uint8(hints.Family),
+		ai_socktype: uint8(hints.SocketType),
+		ai_protocol: uint32(hints.Protocol),
+	}
+	for i := range results {
+		results[i].sockAddr = sockAddr{
+			sa_family:   0,
+			sa_data_len: uint32(unsafe.Sizeof(AddrInfo{}.sockData)),
+			sa_data:     uintptr32(uintptr(unsafe.Pointer(&results[i].sockData))),
+		}
+		results[i].addrInfo = addrInfo{
+			ai_flags:        0,
+			ai_family:       0,
+			ai_socktype:     0,
+			ai_protocol:     0,
+			ai_addrlen:      uint32(unsafe.Sizeof(sockAddr{})),
+			ai_addr:         uintptr32(uintptr(unsafe.Pointer(&results[i].sockAddr))),
+			ai_canonname:    uintptr32(uintptr(unsafe.Pointer(&results[i].cannoname))),
+			ai_canonnamelen: uint32(unsafe.Sizeof(AddrInfo{}.cannoname)),
+		}
+		if i > 0 {
+			results[i-1].addrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i-1].addrInfo)))
+		}
+	}
+
+	resPtr := uintptr32(uintptr(unsafe.Pointer(&results[0].addrInfo)))
+
+	var n uint32
+	errno := sock_getaddrinfo(
+		unsafe.Pointer(unsafe.StringData(name)),
+		uint32(len(name)),
+		unsafe.Pointer(unsafe.StringData(service)),
+		uint32(len(service)),
+		unsafe.Pointer(&hints.addrInfo),
+		unsafe.Pointer(&resPtr),
+		uint32(len(results)),
+		unsafe.Pointer(&n),
+	)
+	if errno != 0 {
+		return 0, errnoErr(Errno(errno))
+	}
+
+	for i := range results[:n] {
+		r := &results[i]
+		port := binary.BigEndian.Uint16(results[i].sockData[:2])
+		switch results[i].sockAddr.sa_family {
+		case AF_INET:
+			r.inet4addr.Port = int(port)
+			copy(r.inet4addr.Addr[:], results[i].sockData[2:])
+			r.Address = &r.inet4addr
+		case AF_INET6:
+			r.inet6addr.Port = int(port)
+			r.Address = &r.inet6addr
+			copy(r.inet4addr.Addr[:], results[i].sockData[2:])
+		default:
+			r.Address = nil
+		}
+		// TODO: canonical names
+	}
+	return int(n), nil
 }
