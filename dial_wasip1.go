@@ -11,8 +11,6 @@ import (
 )
 
 func init() {
-	net.DefaultResolver.Dial = DialContext
-
 	if t, ok := http.DefaultTransport.(*http.Transport); ok {
 		t.DialContext = DialContext
 	}

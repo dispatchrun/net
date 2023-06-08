@@ -84,12 +84,35 @@ func main() {
 
 ## Name Resolution
 
-Go has a built-in name resolver that sidesteps CGO (e.g. `getaddrinfo(3)`)
-calls.
+There are two methods available for resolving a set of IP addresses
+for a hostname.
 
-This library will automatically configure the `net.DefaultResolver`
-from the standard library to use the `Dial` function from this library.
-You just need the following import somewhere:
+### getaddrinfo
+
+The `sock_getaddrinfo` host function is used to implement name resolution.
+This requires WasmEdge, or a WasmEdge compatible WASI layer
+(e.g. [wasi-go](http://github.com/stealthrocket/wasi-go)).
+
+When using this method, the standard library resolver **will not work**. You
+_cannot_ use `net.DefaultResolver`, `net.LookupIP`, etc. with this approach
+because the standard library does not allow us to patch it with an alternative
+implementation.
+
+Note that `sock_getaddrinfo` may block!
+
+### Pure Go Resolver
+
+The pure Go name resolver is not currently enabled for GOOS=wasip1.
+
+The following series of CLs will change this: https://go-review.googlesource.com/c/go/+/500576.
+This will hopefully land in Go v1.22 in ~February 2024.
+
+If you're using a version of Go that has the CL's included, you can
+instruct this library to use the pure Go resolver by including the
+`purego` build tag.
+
+The library will then automatically configure the `net.DefaultResolver`.
+All you need is the following import somewhere in your application:
 
 ```go
 import _ "github.com/stealthrocket/net"
@@ -97,6 +120,3 @@ import _ "github.com/stealthrocket/net"
 
 You should then be able to use the lookup functions from the standard
 library (e.g. `net.LookupIP(host)`).
-
-Note that name resolution currently depends on the following series of CLs:
-https://go-review.googlesource.com/c/go/+/500576
