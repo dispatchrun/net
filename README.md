@@ -1,8 +1,7 @@
 # net
 
 This library provides `net.Dial` and `net.Listen` functions
-for `GOOS=wasip1`. It uses the WasmEdge sockets extension to WASI
-preview 1.
+for `GOOS=wasip1`
 
 Applications built with this library are compatible with WasmEdge
 and [stealthrocket/wasi-go](https://github.com/stealthrocket/wasi-go).
@@ -10,8 +9,9 @@ and [stealthrocket/wasi-go](https://github.com/stealthrocket/wasi-go).
 ## Dialing
 
 The library will automatically configure the default HTTP transport
-to use the `Dial` function from this library. To make outbound HTTP 
-connections you just need the following import somewhere:
+to use the `Dial` function from this library
+
+To make outbound HTTP connections you just need the following import somewhere:
 
 ```go
 import _ "github.com/stealthrocket/net"
@@ -43,7 +43,7 @@ func main() {
 }
 ```
 
-For example, to connect to Redis:
+and to connect to Redis:
 
 ```go
 import (
@@ -90,15 +90,13 @@ for a hostname.
 ### getaddrinfo
 
 The `sock_getaddrinfo` host function is used to implement name resolution.
-This requires WasmEdge, or a WasmEdge compatible WASI layer
-(e.g. [wasi-go](http://github.com/stealthrocket/wasi-go)).
 
 When using this method, the standard library resolver **will not work**. You
-_cannot_ use `net.DefaultResolver`, `net.LookupIP`, etc. with this approach
+cannot use `net.DefaultResolver`, `net.LookupIP`, etc. with this approach
 because the standard library does not allow us to patch it with an alternative
 implementation.
 
-Note that `sock_getaddrinfo` may block!
+Note that `sock_getaddrinfo` may block.
 
 ### Pure Go Resolver
 
