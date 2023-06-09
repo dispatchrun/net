@@ -12,7 +12,7 @@ import (
 
 func TestRedis(t *testing.T) {
 	client := redis.NewClient(&redis.Options{
-		Addr:   "127.0.0.1:6379",
+		Addr:   "localhost:6379",
 		Dialer: wasip1.DialContext,
 	})
 	defer client.Close()
