@@ -3,7 +3,7 @@
 GO ?= go
 GOPATH = $(shell $(GO) env GOPATH)
 
-wasip1.test:
+wasip1.test: go.mod $(wildcard wasip1/*.go)
 	GOARCH=wasm GOOS=wasip1 $(GO) test -c ./wasip1
 
 test: wasirun wasip1.test
