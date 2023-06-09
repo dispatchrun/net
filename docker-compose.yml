@@ -8,7 +8,7 @@ services:
     command: redis-server --loglevel debug
 
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0.33
     cap_add:
     - SYS_NICE
     environment:
