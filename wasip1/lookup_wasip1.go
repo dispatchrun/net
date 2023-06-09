@@ -1,13 +1,15 @@
-package net
+//go:build wasip1 && !purego
+
+package wasip1
 
 import (
-	"fmt"
 	"net"
+	"os"
 
-	"github.com/stealthrocket/net/syscall"
+	"github.com/stealthrocket/net/internal/syscall"
 )
 
-func lookupAddr(context, network, address string) (net.Addr, error) {
+func lookupAddr(op, network, address string) (net.Addr, error) {
 	var hints syscall.AddrInfo
 	switch network {
 	case "tcp", "tcp4", "tcp6":
@@ -19,7 +21,7 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 	case "unix", "unixgram":
 		return &net.UnixAddr{Name: address, Net: network}, nil
 	default:
-		return nil, fmt.Errorf("not implemented: %s", network)
+		return nil, net.UnknownNetworkError(network)
 	}
 	switch network {
 	case "tcp", "udp":
@@ -31,16 +33,17 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 	}
 	hostname, service, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, err
+		return nil, net.InvalidAddrError(address)
 	}
-	if context == "listen" && hostname == "" {
+	if op == "listen" && hostname == "" {
 		hints.Flags |= syscall.AI_PASSIVE
 	}
 
 	results := make([]syscall.AddrInfo, 16)
 	n, err := syscall.Getaddrinfo(hostname, service, hints, results)
 	if err != nil {
-		return nil, err
+		addr := &netAddr{network, address}
+		return nil, newOpError(op, addr, os.NewSyscallError("getaddrinfo", err))
 	}
 	results = results[:n]
 	for _, r := range results {
@@ -61,5 +64,9 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 			return &net.UDPAddr{IP: ip, Port: port}, nil
 		}
 	}
-	return nil, &net.DNSError{Err: "lookup failed", Name: hostname, IsNotFound: true}
+	return nil, &net.DNSError{
+		Err:        "lookup failed",
+		Name:       hostname,
+		IsNotFound: true,
+	}
 }

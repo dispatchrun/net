@@ -1,49 +1,59 @@
-package net
+package wasip1
 
 import (
-	"fmt"
 	"net"
 	"os"
 
-	"github.com/stealthrocket/net/syscall"
+	"github.com/stealthrocket/net/internal/syscall"
 )
 
-// A Listener is a generic network listener for stream-oriented protocols.
-type Listener = net.Listener
-
 // Listen announces on the local network address.
-func Listen(network, address string) (Listener, error) {
+func Listen(network, address string) (net.Listener, error) {
 	addr, err := lookupAddr("listen", network, address)
 	if err != nil {
-		return nil, err
+		addr := &netAddr{network, address}
+		return nil, listenErr(addr, err)
 	}
-	return listenAddr(addr)
+	lstn, err := listenAddr(addr)
+	if err != nil {
+		return nil, listenErr(addr, err)
+	}
+	return lstn, nil
 }
 
-func listenAddr(addr net.Addr) (Listener, error) {
+func listenErr(addr net.Addr, err error) error {
+	return newOpError("listen", addr, err)
+}
+
+func listenAddr(addr net.Addr) (net.Listener, error) {
 	fd, err := syscall.Socket(family(addr), socketType(addr), 0)
 	if err != nil {
-		return nil, fmt.Errorf("Socket: %w", err)
+		return nil, os.NewSyscallError("socket", err)
 	}
 
 	if err := syscall.SetNonblock(fd, true); err != nil {
 		syscall.Close(fd)
-		return nil, fmt.Errorf("SetNonBlock: %w", err)
+		return nil, os.NewSyscallError("setnonblock", err)
 	}
 	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
 		syscall.Close(fd)
-		return nil, err
+		return nil, os.NewSyscallError("setsockopt", err)
 	}
 
-	if err := syscall.Bind(fd, socketAddress(addr)); err != nil {
+	listenAddr, err := socketAddress(addr)
+	if err != nil {
+		return nil, os.NewSyscallError("bind", err)
+	}
+
+	if err := syscall.Bind(fd, listenAddr); err != nil {
 		syscall.Close(fd)
-		return nil, fmt.Errorf("Bind: %w", err)
+		return nil, os.NewSyscallError("bind", err)
 	}
 
 	const backlog = 64 // TODO: configurable?
 	if err := syscall.Listen(fd, backlog); err != nil {
 		syscall.Close(fd)
-		return nil, fmt.Errorf("Listen: %w", err)
+		return nil, os.NewSyscallError("listen", err)
 	}
 
 	f := os.NewFile(uintptr(fd), "")
@@ -53,11 +63,11 @@ func listenAddr(addr net.Addr) (Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &listener{l, addr}, err
+	return &listener{l, addr}, nil
 }
 
 type listener struct {
-	Listener
+	net.Listener
 	addr net.Addr
 }
 

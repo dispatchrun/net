@@ -1,6 +1,6 @@
 //go:build wasip1 && purego
 
-package net
+package wasip1
 
 import (
 	"fmt"
@@ -18,11 +18,11 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 	case "unix", "unixgram":
 		return &net.UnixAddr{Name: address, Net: network}, nil
 	default:
-		return nil, fmt.Errorf("not implemented: %s", network)
+		return nil, net.UnknownNetworkError(network)
 	}
 	hostname, service, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, err
+		return nil, net.InvalidAddrError(address)
 	}
 	port, err := net.LookupPort(network, service)
 	if err != nil {
@@ -71,5 +71,9 @@ func lookupAddr(context, network, address string) (net.Addr, error) {
 			}
 		}
 	}
-	return nil, &net.DNSError{Err: "lookup failed", Name: hostname, IsNotFound: true}
+	return nil, &net.DNSError{
+		Err:        "lookup failed",
+		Name:       hostname,
+		IsNotFound: true,
+	}
 }
