@@ -7,7 +7,11 @@ packages.dir = $(wildcard */)
 packages.test = $(packages.dir:/=.test)
 
 test: wasirun $(packages.test)
-	for pkg in $(packages.test); do $(wasirun) $$pkg -test.v || exit 1; done
+	@for pkg in $(packages.test); do \
+		tmp=$$(mktemp); \
+		$(wasirun) $$pkg > $$tmp; \
+		if (($$?)); then cat $$tmp; exit 1; else printf "ok\tgithub.com/stealthrocket/net/$$pkg\n"; fi \
+	done
 
 wasirun: $(wasirun)
 
