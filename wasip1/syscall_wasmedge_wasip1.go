@@ -6,6 +6,7 @@ package wasip1
 import (
 	"encoding/binary"
 	"runtime"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -299,14 +300,6 @@ type addrInfo struct {
 }
 
 func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int, error) {
-	// For compatibility with WasmEdge, make sure strings are null-terminated.
-	if len(name) > 0 && name[len(name)-1] != 0 {
-		name = string(append([]byte(name), 0))
-	}
-	if len(service) > 0 && service[len(service)-1] != 0 {
-		service = string(append([]byte(service), 0))
-	}
-
 	hints.sockAddrInfo = sockAddrInfo{
 		ai_flags:    uint16(hints.flags),
 		ai_family:   uint8(hints.family),
@@ -335,13 +328,16 @@ func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int
 	}
 
 	resPtr := uintptr32(uintptr(unsafe.Pointer(&results[0].sockAddrInfo)))
+	// For compatibility with WasmEdge, make sure strings are null-terminated.
+	namePtr, nameLen := nullTerminatedString(name)
+	servPtr, servLen := nullTerminatedString(service)
 
 	var n uint32
 	errno := sock_getaddrinfo(
-		unsafe.Pointer(unsafe.StringData(name)),
-		uint32(len(name)),
-		unsafe.Pointer(unsafe.StringData(service)),
-		uint32(len(service)),
+		unsafe.Pointer(namePtr),
+		uint32(nameLen),
+		unsafe.Pointer(servPtr),
+		uint32(servLen),
 		unsafe.Pointer(&hints.sockAddrInfo),
 		unsafe.Pointer(&resPtr),
 		uint32(len(results)),
@@ -369,4 +365,14 @@ func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int
 		// TODO: canonical names
 	}
 	return int(n), nil
+}
+
+func nullTerminatedString(s string) (*byte, int) {
+	if n := strings.IndexByte(s, 0); n >= 0 {
+		s = s[:n+1]
+		return unsafe.StringData(s), len(s)
+	} else {
+		b := append([]byte(s), 0)
+		return unsafe.SliceData(b), len(b)
+	}
 }
