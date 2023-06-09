@@ -1,3 +1,5 @@
+//go:build wasip1
+
 package wasip1
 
 // This file contains the definition of host imports compatible with the socket

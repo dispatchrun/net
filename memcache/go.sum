@@ -1,0 +1,5 @@
+github.com/mar4uk/gomemcache v0.0.0-20221107102512-3adaeb8afff3 h1:fODuxBhkSmNhMOD8faRXsUvoYG5rAijY4YYoOEdsXeY=
+github.com/mar4uk/gomemcache v0.0.0-20221107102512-3adaeb8afff3/go.mod h1:H0wQNHz2YrLsuXOZozoeDmnHXkNCRmMW0gwFWDfEZDA=
+github.com/stealthrocket/net v0.1.2 h1:fxglKhsGrBKMQHiEZuiP2jKyg2WaledYi/G7ijaoAOQ=
+github.com/stealthrocket/net v0.1.2/go.mod h1:9a0HqAOSQobNQt/QNqbIFMZzxOOwOrXU+XxXyeiu98o=
+golang.org/x/net v0.10.0 h1:X2//UzNDwYmtCLn7To6G58Wr6f5ahEAQgKNzv9Y951M=

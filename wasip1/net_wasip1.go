@@ -1,10 +1,13 @@
+//go:build wasip1
+
 package wasip1
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
-	"net/http"
+	"os"
 	"syscall"
 )
 
@@ -23,10 +26,6 @@ func dialResolverNotSupported(ctx context.Context, network, address string) (net
 
 func init() {
 	net.DefaultResolver.Dial = dialResolverNotSupported
-
-	if t, ok := http.DefaultTransport.(*http.Transport); ok {
-		t.DialContext = DialContext
-	}
 }
 
 func newOpError(op string, addr net.Addr, err error) error {
@@ -119,19 +118,24 @@ func makeConn(c net.Conn) (net.Conn, error) {
 	rawConn, err := syscallConn.SyscallConn()
 	if err != nil {
 		c.Close()
-		return nil, err
+		return nil, fmt.Errorf("syscall.Conn.SyscallConn: %w", err)
 	}
 	var laddr net.Addr
 	var raddr net.Addr
 	rawConnErr := rawConn.Control(func(fd uintptr) {
 		var addr sockaddr
 		var peer sockaddr
+
 		if addr, err = getsockname(int(fd)); err != nil {
+			err = os.NewSyscallError("getsockname", err)
 			return
 		}
+
 		if peer, err = getpeername(int(fd)); err != nil {
+			err = os.NewSyscallError("getpeername", err)
 			return
 		}
+
 		switch c.(type) {
 		case *net.UnixConn:
 			laddr = sockaddrToUnixAddr(addr)

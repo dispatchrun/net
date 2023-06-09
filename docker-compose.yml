@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.0-alpine
+    ports:
+    - '6379:6379'
+    command: redis-server --loglevel debug
+
+  memcached:
+    image: memcached:1.6.20-alpine
+    ports:
+    - '11211:11211'
+
+  mysql:
+    image: mysql:8.0.33
+    cap_add:
+    - SYS_NICE
+    environment:
+    - MYSQL_DATABASE=test
+    - MYSQL_ROOT_PASSWORD=test
+    ports:
+    - '3306:3306'
+
+  postgres:
+    image: postgres:15.3
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: pqgotest
+      POSTGRES_PASSWORD: password
+    ports:
+    - '5432:5432'
