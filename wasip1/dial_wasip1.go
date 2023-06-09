@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/stealthrocket/net/syscall"
+	"github.com/stealthrocket/net/internal/syscall"
 )
 
 func init() {
@@ -29,17 +29,23 @@ func Dial(network, address string) (net.Conn, error) {
 func DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	select {
 	case <-ctx.Done():
-		return nil, &net.OpError{
-			Op:  "dial",
-			Net: network,
-			Addr: &networkAddress{
-				network: network,
-				address: address,
-			},
-			Err: context.Cause(ctx),
+		addr := &networkAddress{
+			network: network,
+			address: address,
 		}
+		return nil, dialErr(nil, addr, context.Cause(err))
 	default:
 		return Dial(network, address)
+	}
+}
+
+func dialErr(source, addr net.Addr, err error) error {
+	return &net.OpError{
+		Op:     "dial",
+		Net:    addr.Network(),
+		Source: source,
+		Addr:   addr,
+		Err:    err,
 	}
 }
 

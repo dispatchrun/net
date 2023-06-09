@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/stealthrocket/net/syscall"
+	"github.com/stealthrocket/net/internal/syscall"
 )
 
 // Listen announces on the local network address.
