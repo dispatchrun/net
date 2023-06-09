@@ -25,7 +25,11 @@ func listenErr(addr net.Addr, err error) error {
 }
 
 func listenAddr(addr net.Addr) (net.Listener, error) {
-	fd, err := socket(family(addr), socketType(addr), 0)
+	sotype, err := socketType(addr)
+	if err != nil {
+		return nil, os.NewSyscallError("socket", err)
+	}
+	fd, err := socket(family(addr), sotype, 0)
 	if err != nil {
 		return nil, os.NewSyscallError("socket", err)
 	}
@@ -43,12 +47,10 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 	if err != nil {
 		return nil, os.NewSyscallError("bind", err)
 	}
-
 	if err := bind(fd, listenAddr); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("bind", err)
 	}
-
 	const backlog = 64 // TODO: configurable?
 	if err := listen(fd, backlog); err != nil {
 		syscall.Close(fd)
@@ -75,8 +77,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: get local+peer address; wrap Conn to implement LocalAddr() and RemoteAddr()
-	return c, nil
+	return makeConn(c)
 }
 
 func (l *listener) Addr() net.Addr {
