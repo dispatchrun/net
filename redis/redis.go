@@ -3,4 +3,7 @@
 // The test uses https://pkg.go.dev/github.com/redis/go-redis/v9 and interacts
 // with a redis server on localhost:6379. The docker-compose.yml file in the
 // parent directory may be used to start a redis server to run the test against.
+//
+// When compiling to other targets than GOOS=wasip1, importing this package has
+// no effect.
 package redis

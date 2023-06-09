@@ -4,6 +4,7 @@ package wasip1
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"syscall"
@@ -143,7 +144,7 @@ func dialAddr(ctx context.Context, addr net.Addr) (net.Conn, error) {
 	if inProgress {
 		rawConn, err := f.SyscallConn()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("os.(*File).SyscallConn: %w", err)
 		}
 
 		errch := make(chan error)
@@ -167,6 +168,7 @@ func dialAddr(ctx context.Context, addr net.Addr) (net.Conn, error) {
 					_, err := getpeername(int(fd))
 					return err == nil
 				default:
+					err = syscall.Errno(value)
 					return true
 				}
 			})
@@ -194,7 +196,7 @@ func dialAddr(ctx context.Context, addr net.Addr) (net.Conn, error) {
 
 	c, err := net.FileConn(f)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("net.FileConn: %w", err)
 	}
 	return makeConn(c)
 }
