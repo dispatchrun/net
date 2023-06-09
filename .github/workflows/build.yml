@@ -13,6 +13,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  GOPRIVATE: github.com/stealthrocket
+  GH_ACCESS_TOKEN: ${{ secrets.PRIVATE_ACCESS_TOKEN }}
+
 jobs:
   test:
     name: Go Test
@@ -30,4 +34,5 @@ jobs:
         ls -lah gotip.tar.gz
         mkdir -p $HOME/gotip
         tar -C $HOME/gotip -xzf gotip.tar.gz
+    - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com.insteadOf https://github.com
     - run: make test GO=$HOME/gotip/bin/go GOPATH=$HOME/gotip
