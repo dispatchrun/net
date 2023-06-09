@@ -3,13 +3,16 @@
 GOPATH ?= $(shell $(GO) env GOPATH)
 wasirun = $(GOPATH)/bin/wasirun
 
-wasip1.test: go.mod $(wildcard wasip1/*.go)
-	GOARCH=wasm GOOS=wasip1 $(GO) test -c ./wasip1
+packages.dir = $(wildcard */)
+packages.test = $(packages.dir:/=.test)
 
-test: wasirun wasip1.test
-	$(wasirun) wasip1.test -test.v
+test: wasirun $(packages.test)
+	for pkg in $(packages.test); do wasirun $$pkg -test.v || exit 1; done
 
 wasirun: $(wasirun)
 
 $(wasirun):
 	$(GO) install github.com/stealthrocket/wasi-go/cmd/wasirun@latest
+
+%.test: %/
+	cd $< && GOARCH=wasm GOOS=wasip1 $(GO) test -c -o ../$(notdir $@)
