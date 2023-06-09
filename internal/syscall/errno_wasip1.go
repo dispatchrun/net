@@ -4,19 +4,17 @@
 
 package syscall
 
-import (
-	"syscall"
-)
+import "syscall"
 
 type Errno = syscall.Errno
 
 const (
-	EAGAIN      Errno = 6
-	EINPROGRESS Errno = 26
-	EINTR       Errno = 27
-	EISCONN     Errno = 30
-	ENOSYS      Errno = 52
-	ENOTSUP     Errno = 58
+	EAGAIN      = syscall.EAGAIN
+	EINPROGRESS = syscall.EINPROGRESS
+	EINTR       = syscall.EINTR
+	EISCONN     = syscall.EISCONN
+	ENOSYS      = syscall.ENOSYS
+	ENOTSUP     = syscall.ENOTSUP
 )
 
 // Do the interface allocations only once for common
