@@ -1,4 +1,4 @@
-package net
+package wasip1
 
 import (
 	"fmt"
