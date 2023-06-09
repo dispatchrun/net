@@ -1,7 +1,18 @@
 version: '3.8'
+
 services:
   redis:
     image: redis:7.0-alpine
     ports:
     - '6379:6379'
     command: redis-server --loglevel debug
+
+  mysql:
+    image: mysql:8.0
+    cap_add:
+    - SYS_NICE
+    environment:
+    - MYSQL_DATABASE=test
+    - MYSQL_ROOT_PASSWORD=test
+    ports:
+    - '3306:3306'
