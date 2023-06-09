@@ -1,6 +1,3 @@
-// Package http exists only to modify the dial function of the default http
-// transport, allowing all clients that rely on it to establish output
-// connections when compiled to GOOS=wasip1.
 package http
 
 import (

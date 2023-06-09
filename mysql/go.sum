@@ -1,0 +1,5 @@
+github.com/go-sql-driver/mysql v1.7.1 h1:lUIinVbN1DY0xBg0eMOzmmtGoHwWBbvnWubQUrtU8EI=
+github.com/go-sql-driver/mysql v1.7.1/go.mod h1:OXbVy3sEdcQ2Doequ6Z5BW6fXNQTmx+9S1MCJN5yJMI=
+github.com/stealthrocket/net v0.1.2 h1:fxglKhsGrBKMQHiEZuiP2jKyg2WaledYi/G7ijaoAOQ=
+github.com/stealthrocket/net v0.1.2/go.mod h1:9a0HqAOSQobNQt/QNqbIFMZzxOOwOrXU+XxXyeiu98o=
+golang.org/x/net v0.10.0 h1:X2//UzNDwYmtCLn7To6G58Wr6f5ahEAQgKNzv9Y951M=
