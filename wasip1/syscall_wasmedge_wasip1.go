@@ -71,14 +71,14 @@ func (s *sockaddrInet4) sockport() int {
 }
 
 type sockaddrInet6 struct {
-	port   int
-	ZoneId uint32
-	addr   [16]byte
-	raw    addressBuffer
+	port int
+	zone uint32
+	addr [16]byte
+	raw  addressBuffer
 }
 
 func (s *sockaddrInet6) sockaddr() (unsafe.Pointer, error) {
-	if s.ZoneId != 0 {
+	if s.zone != 0 {
 		return nil, syscall.ENOTSUP
 	}
 	s.raw.bufLen = 16

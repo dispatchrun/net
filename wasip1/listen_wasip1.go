@@ -25,7 +25,11 @@ func listenErr(addr net.Addr, err error) error {
 }
 
 func listenAddr(addr net.Addr) (net.Listener, error) {
-	fd, err := socket(family(addr), socketType(addr), 0)
+	sotype, err := socketType(addr)
+	if err != nil {
+		return nil, os.NewSyscallError("socket", err)
+	}
+	fd, err := socket(family(addr), sotype, 0)
 	if err != nil {
 		return nil, os.NewSyscallError("socket", err)
 	}
@@ -39,20 +43,24 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		return nil, os.NewSyscallError("setsockopt", err)
 	}
 
-	listenAddr, err := socketAddress(addr)
+	bindAddr, err := socketAddress(addr)
 	if err != nil {
 		return nil, os.NewSyscallError("bind", err)
 	}
-
-	if err := bind(fd, listenAddr); err != nil {
+	if err := bind(fd, bindAddr); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("bind", err)
 	}
-
 	const backlog = 64 // TODO: configurable?
 	if err := listen(fd, backlog); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("listen", err)
+	}
+
+	sockaddr, err := getsockname(fd)
+	if err != nil {
+		syscall.Close(fd)
+		return nil, os.NewSyscallError("getsockname", err)
 	}
 
 	f := os.NewFile(uintptr(fd), "")
@@ -61,6 +69,12 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 	l, err := net.FileListener(f)
 	if err != nil {
 		return nil, err
+	}
+	switch l.(type) {
+	case *net.UnixListener:
+		addr = sockaddrToUnixAddr(sockaddr)
+	case *net.TCPListener:
+		addr = sockaddrToTCPAddr(sockaddr)
 	}
 	return &listener{l, addr}, nil
 }
@@ -75,8 +89,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: get local+peer address; wrap Conn to implement LocalAddr() and RemoteAddr()
-	return c, nil
+	return makeConn(c)
 }
 
 func (l *listener) Addr() net.Addr {
