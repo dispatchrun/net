@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/http"
 	"syscall"
 )
 
@@ -23,10 +22,6 @@ func dialResolverNotSupported(ctx context.Context, network, address string) (net
 
 func init() {
 	net.DefaultResolver.Dial = dialResolverNotSupported
-
-	if t, ok := http.DefaultTransport.(*http.Transport); ok {
-		t.DialContext = DialContext
-	}
 }
 
 func newOpError(op string, addr net.Addr, err error) error {
