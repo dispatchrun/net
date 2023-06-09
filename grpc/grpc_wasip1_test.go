@@ -1,3 +1,5 @@
+//go:build wasip1
+
 package grpc_test
 
 import (
