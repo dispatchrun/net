@@ -52,8 +52,11 @@ func TestConn(t *testing.T) {
 					}
 				}()
 
+				dialer := &wasip1.Dialer{}
+				dialer.Deadline, _ = t.Deadline()
+
 				address := l.Addr()
-				c1, err = wasip1.Dial(address.Network(), address.String())
+				c1, err = dialer.Dial(address.Network(), address.String())
 				if err != nil {
 					return nil, nil, nil, err
 				}
