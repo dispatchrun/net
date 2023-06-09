@@ -43,11 +43,11 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		return nil, os.NewSyscallError("setsockopt", err)
 	}
 
-	listenAddr, err := socketAddress(addr)
+	bindAddr, err := socketAddress(addr)
 	if err != nil {
 		return nil, os.NewSyscallError("bind", err)
 	}
-	if err := bind(fd, listenAddr); err != nil {
+	if err := bind(fd, bindAddr); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("bind", err)
 	}
@@ -57,12 +57,24 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		return nil, os.NewSyscallError("listen", err)
 	}
 
+	sockaddr, err := getsockname(fd)
+	if err != nil {
+		syscall.Close(fd)
+		return nil, os.NewSyscallError("getsockname", err)
+	}
+
 	f := os.NewFile(uintptr(fd), "")
 	defer f.Close()
 
 	l, err := net.FileListener(f)
 	if err != nil {
 		return nil, err
+	}
+	switch l.(type) {
+	case *net.UnixListener:
+		addr = sockaddrToUnixAddr(sockaddr)
+	case *net.TCPListener:
+		addr = sockaddrToTCPAddr(sockaddr)
 	}
 	return &listener{l, addr}, nil
 }
