@@ -3,17 +3,10 @@ package wasip1
 import (
 	"context"
 	"net"
-	"net/http"
 	"os"
 
 	"github.com/stealthrocket/net/internal/syscall"
 )
-
-func init() {
-	if t, ok := http.DefaultTransport.(*http.Transport); ok {
-		t.DialContext = DialContext
-	}
-}
 
 // Dial connects to the address on the named network.
 func Dial(network, address string) (net.Conn, error) {
