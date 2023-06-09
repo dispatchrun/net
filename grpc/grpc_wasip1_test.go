@@ -23,6 +23,9 @@ func (s *helloService) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.H
 }
 
 func TestGRPC(t *testing.T) {
+	// First create the listener that the gRPC server will be using to accept
+	// connections using the wasip1 package instead of the standard net package
+	// to use WASI socket extensions not available in Go 1.21.
 	l, err := wasip1.Listen("tcp", ":0")
 	if err != nil {
 		t.Fatal(err)

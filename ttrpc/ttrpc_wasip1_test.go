@@ -28,7 +28,9 @@ func TestTTRPC(t *testing.T) {
 		ctx, cancel = context.WithDeadline(ctx, deadline)
 		defer cancel()
 	}
-
+	// First create the listener that the ttrpc server will be using to accept
+	// connections using the wasip1 package instead of the standard net package
+	// to use WASI socket extensions not available in Go 1.21.
 	l, err := wasip1.Listen("tcp", ":0")
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +49,9 @@ func TestTTRPC(t *testing.T) {
 	go func() {
 		defer close(errs)
 		defer server.Shutdown(ctx)
-
+		// Connect to the ttrpc server using the wasip1 dial function to
+		// establish a connection using the WASI socket extensions not available
+		// in Go 1.21.
 		conn, err := wasip1.DialContext(ctx, "tcp", addr)
 		if err != nil {
 			errs <- err
