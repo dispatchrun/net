@@ -3,8 +3,7 @@ package wasip1
 import (
 	"net"
 	"os"
-
-	"github.com/stealthrocket/net/internal/syscall"
+	"syscall"
 )
 
 // Listen announces on the local network address.
@@ -26,7 +25,7 @@ func listenErr(addr net.Addr, err error) error {
 }
 
 func listenAddr(addr net.Addr) (net.Listener, error) {
-	fd, err := syscall.Socket(family(addr), socketType(addr), 0)
+	fd, err := socket(family(addr), socketType(addr), 0)
 	if err != nil {
 		return nil, os.NewSyscallError("socket", err)
 	}
@@ -35,7 +34,7 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("setnonblock", err)
 	}
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); err != nil {
+	if err := setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("setsockopt", err)
 	}
@@ -45,13 +44,13 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		return nil, os.NewSyscallError("bind", err)
 	}
 
-	if err := syscall.Bind(fd, listenAddr); err != nil {
+	if err := bind(fd, listenAddr); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("bind", err)
 	}
 
 	const backlog = 64 // TODO: configurable?
-	if err := syscall.Listen(fd, backlog); err != nil {
+	if err := listen(fd, backlog); err != nil {
 		syscall.Close(fd)
 		return nil, os.NewSyscallError("listen", err)
 	}

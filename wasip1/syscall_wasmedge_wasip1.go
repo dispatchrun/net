@@ -1,12 +1,12 @@
-// Copyright 2023 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+package wasip1
 
-package syscall
+// This file contains the definition of host imports compatible with the socket
+// extensions from wasmedge v0.12+.
 
 import (
 	"encoding/binary"
 	"runtime"
+	"syscall"
 	"unsafe"
 )
 
@@ -48,58 +48,56 @@ const (
 	IPPROTO_UDP
 )
 
-type Sockaddr interface {
+type sockaddr interface {
 	sockaddr() (unsafe.Pointer, error)
 	sockport() int
 }
 
-type SockaddrInet4 struct {
-	Port int
-	Addr [4]byte
-
-	raw addressBuffer
+type sockaddrInet4 struct {
+	port int
+	addr [4]byte
+	raw  addressBuffer
 }
 
-func (s *SockaddrInet4) sockaddr() (unsafe.Pointer, error) {
+func (s *sockaddrInet4) sockaddr() (unsafe.Pointer, error) {
 	s.raw.bufLen = 4
-	s.raw.buf = uintptr32(uintptr(unsafe.Pointer(&s.Addr)))
+	s.raw.buf = uintptr32(uintptr(unsafe.Pointer(&s.addr)))
 	return unsafe.Pointer(&s.raw), nil
 }
 
-func (s *SockaddrInet4) sockport() int {
-	return s.Port
+func (s *sockaddrInet4) sockport() int {
+	return s.port
 }
 
-type SockaddrInet6 struct {
-	Port   int
+type sockaddrInet6 struct {
+	port   int
 	ZoneId uint32
-	Addr   [16]byte
-
-	raw addressBuffer
+	addr   [16]byte
+	raw    addressBuffer
 }
 
-func (s *SockaddrInet6) sockaddr() (unsafe.Pointer, error) {
+func (s *sockaddrInet6) sockaddr() (unsafe.Pointer, error) {
 	if s.ZoneId != 0 {
-		return nil, ENOTSUP
+		return nil, syscall.ENOTSUP
 	}
 	s.raw.bufLen = 16
-	s.raw.buf = uintptr32(uintptr(unsafe.Pointer(&s.Addr)))
+	s.raw.buf = uintptr32(uintptr(unsafe.Pointer(&s.addr)))
 	return unsafe.Pointer(&s.raw), nil
 }
 
-func (s *SockaddrInet6) sockport() int {
-	return s.Port
+func (s *sockaddrInet6) sockport() int {
+	return s.port
 }
 
-type SockaddrUnix struct {
-	Name string
+type sockaddrUnix struct {
+	name string
 }
 
-func (s *SockaddrUnix) sockaddr() (unsafe.Pointer, error) {
-	return nil, ENOSYS
+func (s *sockaddrUnix) sockaddr() (unsafe.Pointer, error) {
+	return nil, syscall.ENOSYS
 }
 
-func (s *SockaddrUnix) sockport() int {
+func (s *sockaddrUnix) sockport() int {
 	return 0
 }
 
@@ -111,42 +109,42 @@ type addressBuffer struct {
 	bufLen size
 }
 
-type RawSockaddrAny struct {
+type rawSockaddrAny struct {
 	family uint16
 	addr   [126]byte
 }
 
 //go:wasmimport wasi_snapshot_preview1 sock_open
 //go:noescape
-func sock_open(af int32, socktype int32, fd unsafe.Pointer) Errno
+func sock_open(af int32, socktype int32, fd unsafe.Pointer) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_bind
 //go:noescape
-func sock_bind(fd int32, addr unsafe.Pointer, port uint32) Errno
+func sock_bind(fd int32, addr unsafe.Pointer, port uint32) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_listen
 //go:noescape
-func sock_listen(fd int32, backlog int32) Errno
+func sock_listen(fd int32, backlog int32) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_connect
 //go:noescape
-func sock_connect(fd int32, addr unsafe.Pointer, port uint32) Errno
+func sock_connect(fd int32, addr unsafe.Pointer, port uint32) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getsockopt
 //go:noescape
-func sock_getsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) Errno
+func sock_getsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_setsockopt
 //go:noescape
-func sock_setsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) Errno
+func sock_setsockopt(fd int32, level uint32, name uint32, value unsafe.Pointer, valueLen uint32) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getlocaladdr
 //go:noescape
-func sock_getlocaladdr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
+func sock_getlocaladdr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getpeeraddr
 //go:noescape
-func sock_getpeeraddr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) Errno
+func sock_getpeeraddr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) syscall.Errno
 
 //go:wasmimport wasi_snapshot_preview1 sock_getaddrinfo
 //go:noescape
@@ -159,53 +157,70 @@ func sock_getaddrinfo(
 	res unsafe.Pointer,
 	maxResLen uint32,
 	resLen unsafe.Pointer,
-) uint32
+) syscall.Errno
 
-func Socket(proto, sotype, unused int) (fd int, err error) {
+func socket(proto, sotype, unused int) (fd int, err error) {
 	var newfd int32
 	errno := sock_open(int32(proto), int32(sotype), unsafe.Pointer(&newfd))
-	return int(newfd), errnoErr(errno)
+	if errno != 0 {
+		return -1, errno
+	}
+	return int(newfd), nil
 }
 
-func Bind(fd int, sa Sockaddr) error {
+func bind(fd int, sa sockaddr) error {
 	rawaddr, err := sa.sockaddr()
 	if err != nil {
 		return err
 	}
 	errno := sock_bind(int32(fd), rawaddr, uint32(sa.sockport()))
 	runtime.KeepAlive(sa)
-	return errnoErr(errno)
+	if errno != 0 {
+		return errno
+	}
+	return nil
 }
 
-func Listen(fd int, backlog int) error {
-	errno := sock_listen(int32(fd), int32(backlog))
-	return errnoErr(errno)
+func listen(fd int, backlog int) error {
+	if errno := sock_listen(int32(fd), int32(backlog)); errno != 0 {
+		return errno
+	}
+	return nil
 }
 
-func Connect(fd int, sa Sockaddr) error {
+func connect(fd int, sa sockaddr) error {
 	rawaddr, err := sa.sockaddr()
 	if err != nil {
 		return err
 	}
 	errno := sock_connect(int32(fd), rawaddr, uint32(sa.sockport()))
 	runtime.KeepAlive(sa)
-	return errnoErr(errno)
+	if errno != 0 {
+		return errno
+	}
+	return nil
 }
 
-func GetsockoptInt(fd, level, opt int) (value int, err error) {
+func getsockopt(fd, level, opt int) (value int, err error) {
 	var n int32
 	errno := sock_getsockopt(int32(fd), uint32(level), uint32(opt), unsafe.Pointer(&n), 4)
-	return int(n), errnoErr(errno)
+	if errno != 0 {
+		return 0, errno
+	}
+	return int(n), nil
 }
 
-func SetsockoptInt(fd, level, opt int, value int) error {
+func setsockopt(fd, level, opt int, value int) error {
 	var n = int32(value)
 	errno := sock_setsockopt(int32(fd), uint32(level), uint32(opt), unsafe.Pointer(&n), 4)
-	return errnoErr(errno)
+	if errno != 0 {
+		return errno
+	}
+	return nil
 }
 
-func Getsockname(fd int) (sa Sockaddr, err error) {
-	var rsa RawSockaddrAny
+func getsockname(fd int) (sa sockaddr, err error) {
+	var rsa rawSockaddrAny
 	buf := addressBuffer{
 		buf:    uintptr32(uintptr(unsafe.Pointer(&rsa))),
 		bufLen: uint32(unsafe.Sizeof(rsa)),
@@ -213,13 +228,13 @@ func Getsockname(fd int) (sa Sockaddr, err error) {
 	var port uint32
 	errno := sock_getlocaladdr(int32(fd), unsafe.Pointer(&buf), unsafe.Pointer(&port))
 	if errno != 0 {
-		return nil, errnoErr(errno)
+		return nil, errno
 	}
 	return anyToSockaddr(&rsa, int(port))
 }
 
-func Getpeername(fd int) (Sockaddr, error) {
-	var rsa RawSockaddrAny
+func getpeername(fd int) (sockaddr, error) {
+	var rsa rawSockaddrAny
 	buf := addressBuffer{
 		buf:    uintptr32(uintptr(unsafe.Pointer(&rsa))),
 		bufLen: uint32(unsafe.Sizeof(rsa)),
@@ -227,28 +242,28 @@ func Getpeername(fd int) (Sockaddr, error) {
 	var port uint32
 	errno := sock_getpeeraddr(int32(fd), unsafe.Pointer(&buf), unsafe.Pointer(&port))
 	if errno != 0 {
-		return nil, errnoErr(errno)
+		return nil, errno
 	}
 	return anyToSockaddr(&rsa, int(port))
 }
 
-func anyToSockaddr(rsa *RawSockaddrAny, port int) (Sockaddr, error) {
+func anyToSockaddr(rsa *rawSockaddrAny, port int) (sockaddr, error) {
 	switch rsa.family {
 	case AF_INET:
-		addr := SockaddrInet4{Port: port}
-		copy(addr.Addr[:], rsa.addr[:])
+		addr := sockaddrInet4{port: port}
+		copy(addr.addr[:], rsa.addr[:])
 		return &addr, nil
 	case AF_INET6:
-		addr := SockaddrInet6{Port: port}
-		copy(addr.Addr[:], rsa.addr[:])
+		addr := sockaddrInet6{port: port}
+		copy(addr.addr[:], rsa.addr[:])
 		return &addr, nil
 	default:
-		return nil, ENOTSUP
+		return nil, syscall.ENOTSUP
 	}
 }
 
 // https://github.com/WasmEdge/WasmEdge/blob/434e1fb4690/thirdparty/wasi/api.hpp#L1885
-type addrInfo struct {
+type sockAddrInfo struct {
 	ai_flags        uint16
 	ai_family       uint8
 	ai_socktype     uint8
@@ -257,7 +272,7 @@ type addrInfo struct {
 	ai_addr         uintptr32 // *sockAddr
 	ai_canonname    uintptr32 // null-terminated string
 	ai_canonnamelen uint32
-	ai_next         uintptr32 // *addrInfo
+	ai_next         uintptr32 // *sockAddrInfo
 }
 
 type sockAddr struct {
@@ -267,23 +282,23 @@ type sockAddr struct {
 	_           [4]byte
 }
 
-type AddrInfo struct {
-	Flags         int
-	Family        int
-	SocketType    int
-	Protocol      int
-	Address       Sockaddr
-	CanonicalName string
+type addrInfo struct {
+	flags      int
+	family     int
+	socketType int
+	protocol   int
+	address    sockaddr
+	// canonicalName string
 
-	addrInfo
+	sockAddrInfo
 	sockAddr
 	sockData  [26]byte
 	cannoname [30]byte
-	inet4addr SockaddrInet4
-	inet6addr SockaddrInet6
+	inet4addr sockaddrInet4
+	inet6addr sockaddrInet6
 }
 
-func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int, error) {
+func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int, error) {
 	// For compatibility with WasmEdge, make sure strings are null-terminated.
 	if len(name) > 0 && name[len(name)-1] != 0 {
 		name = string(append([]byte(name), 0))
@@ -292,19 +307,19 @@ func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int,
 		service = string(append([]byte(service), 0))
 	}
 
-	hints.addrInfo = addrInfo{
-		ai_flags:    uint16(hints.Flags),
-		ai_family:   uint8(hints.Family),
-		ai_socktype: uint8(hints.SocketType),
-		ai_protocol: uint32(hints.Protocol),
+	hints.sockAddrInfo = sockAddrInfo{
+		ai_flags:    uint16(hints.flags),
+		ai_family:   uint8(hints.family),
+		ai_socktype: uint8(hints.socketType),
+		ai_protocol: uint32(hints.protocol),
 	}
 	for i := range results {
 		results[i].sockAddr = sockAddr{
 			sa_family:   0,
-			sa_data_len: uint32(unsafe.Sizeof(AddrInfo{}.sockData)),
+			sa_data_len: uint32(unsafe.Sizeof(addrInfo{}.sockData)),
 			sa_data:     uintptr32(uintptr(unsafe.Pointer(&results[i].sockData))),
 		}
-		results[i].addrInfo = addrInfo{
+		results[i].sockAddrInfo = sockAddrInfo{
 			ai_flags:        0,
 			ai_family:       0,
 			ai_socktype:     0,
@@ -312,14 +327,14 @@ func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int,
 			ai_addrlen:      uint32(unsafe.Sizeof(sockAddr{})),
 			ai_addr:         uintptr32(uintptr(unsafe.Pointer(&results[i].sockAddr))),
 			ai_canonname:    uintptr32(uintptr(unsafe.Pointer(&results[i].cannoname))),
-			ai_canonnamelen: uint32(unsafe.Sizeof(AddrInfo{}.cannoname)),
+			ai_canonnamelen: uint32(unsafe.Sizeof(addrInfo{}.cannoname)),
 		}
 		if i > 0 {
-			results[i-1].addrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i-1].addrInfo)))
+			results[i-1].sockAddrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i-1].sockAddrInfo)))
 		}
 	}
 
-	resPtr := uintptr32(uintptr(unsafe.Pointer(&results[0].addrInfo)))
+	resPtr := uintptr32(uintptr(unsafe.Pointer(&results[0].sockAddrInfo)))
 
 	var n uint32
 	errno := sock_getaddrinfo(
@@ -327,13 +342,13 @@ func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int,
 		uint32(len(name)),
 		unsafe.Pointer(unsafe.StringData(service)),
 		uint32(len(service)),
-		unsafe.Pointer(&hints.addrInfo),
+		unsafe.Pointer(&hints.sockAddrInfo),
 		unsafe.Pointer(&resPtr),
 		uint32(len(results)),
 		unsafe.Pointer(&n),
 	)
 	if errno != 0 {
-		return 0, errnoErr(Errno(errno))
+		return 0, errno
 	}
 
 	for i := range results[:n] {
@@ -341,15 +356,15 @@ func Getaddrinfo(name, service string, hints AddrInfo, results []AddrInfo) (int,
 		port := binary.BigEndian.Uint16(results[i].sockData[:2])
 		switch results[i].sockAddr.sa_family {
 		case AF_INET:
-			r.inet4addr.Port = int(port)
-			copy(r.inet4addr.Addr[:], results[i].sockData[2:])
-			r.Address = &r.inet4addr
+			r.inet4addr.port = int(port)
+			copy(r.inet4addr.addr[:], results[i].sockData[2:])
+			r.address = &r.inet4addr
 		case AF_INET6:
-			r.inet6addr.Port = int(port)
-			r.Address = &r.inet6addr
-			copy(r.inet4addr.Addr[:], results[i].sockData[2:])
+			r.inet6addr.port = int(port)
+			r.address = &r.inet6addr
+			copy(r.inet4addr.addr[:], results[i].sockData[2:])
 		default:
-			r.Address = nil
+			r.address = nil
 		}
 		// TODO: canonical names
 	}

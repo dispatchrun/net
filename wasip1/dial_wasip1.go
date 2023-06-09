@@ -4,8 +4,7 @@ import (
 	"context"
 	"net"
 	"os"
-
-	"github.com/stealthrocket/net/internal/syscall"
+	"syscall"
 )
 
 // Dial connects to the address on the named network.
@@ -41,7 +40,7 @@ func dialAddr(addr net.Addr) (net.Conn, error) {
 	proto := family(addr)
 	sotype := socketType(addr)
 
-	fd, err := syscall.Socket(proto, sotype, 0)
+	fd, err := socket(proto, sotype, 0)
 	if err != nil {
 		return nil, os.NewSyscallError("socket", err)
 	}
@@ -51,8 +50,8 @@ func dialAddr(addr net.Addr) (net.Conn, error) {
 		return nil, os.NewSyscallError("setnonblock", err)
 	}
 
-	if sotype == syscall.SOCK_DGRAM && proto != syscall.AF_UNIX {
-		if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_BROADCAST, 1); err != nil {
+	if sotype == SOCK_DGRAM && proto != AF_UNIX {
+		if err := setsockopt(fd, SOL_SOCKET, SO_BROADCAST, 1); err != nil {
 			syscall.Close(fd)
 			return nil, os.NewSyscallError("setsockopt", err)
 		}
@@ -64,7 +63,7 @@ func dialAddr(addr net.Addr) (net.Conn, error) {
 	}
 
 	var inProgress bool
-	switch err := syscall.Connect(fd, connectAddr); err {
+	switch err := connect(fd, connectAddr); err {
 	case nil:
 	case syscall.EINPROGRESS:
 		inProgress = true
@@ -83,7 +82,7 @@ func dialAddr(addr net.Addr) (net.Conn, error) {
 		}
 		rawConnErr := rawConn.Write(func(fd uintptr) bool {
 			var value int
-			value, err = syscall.GetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_ERROR)
+			value, err = getsockopt(int(fd), SOL_SOCKET, SO_ERROR)
 			if err != nil {
 				return true // done
 			}
@@ -96,7 +95,7 @@ func dialAddr(addr net.Addr) (net.Conn, error) {
 			case syscall.Errno(0):
 				// The net poller can wake up spuriously. Check that we are
 				// are really connected.
-				_, err := syscall.Getpeername(int(fd))
+				_, err := getpeername(int(fd))
 				return err == nil
 			default:
 				return true
@@ -123,7 +122,7 @@ func family(addr net.Addr) int {
 	var ip net.IP
 	switch a := addr.(type) {
 	case *net.UnixAddr:
-		return syscall.AF_UNIX
+		return AF_UNIX
 	case *net.TCPAddr:
 		ip = a.IP
 	case *net.UDPAddr:
@@ -132,30 +131,30 @@ func family(addr net.Addr) int {
 		ip = a.IP
 	}
 	if ip.To4() != nil {
-		return syscall.AF_INET
+		return AF_INET
 	} else if len(ip) == net.IPv6len {
-		return syscall.AF_INET6
+		return AF_INET6
 	}
-	return syscall.AF_INET
+	return AF_INET
 }
 
 func socketType(addr net.Addr) int {
 	switch addr.Network() {
 	case "tcp", "unix":
-		return syscall.SOCK_STREAM
+		return SOCK_STREAM
 	case "udp", "unixgram":
-		return syscall.SOCK_DGRAM
+		return SOCK_DGRAM
 	default:
 		panic("not implemented")
 	}
 }
 
-func socketAddress(addr net.Addr) (syscall.Sockaddr, error) {
+func socketAddress(addr net.Addr) (sockaddr, error) {
 	var ip net.IP
 	var port int
 	switch a := addr.(type) {
 	case *net.UnixAddr:
-		return &syscall.SockaddrUnix{Name: a.Name}, nil
+		return &sockaddrUnix{name: a.Name}, nil
 	case *net.TCPAddr:
 		ip, port = a.IP, a.Port
 	case *net.UDPAddr:
@@ -164,9 +163,9 @@ func socketAddress(addr net.Addr) (syscall.Sockaddr, error) {
 		ip = a.IP
 	}
 	if ipv4 := ip.To4(); ipv4 != nil {
-		return &syscall.SockaddrInet4{Addr: ([4]byte)(ipv4), Port: port}, nil
+		return &sockaddrInet4{addr: ([4]byte)(ipv4), port: port}, nil
 	} else if len(ip) == net.IPv6len {
-		return &syscall.SockaddrInet6{Addr: ([16]byte)(ip), Port: port}, nil
+		return &sockaddrInet6{addr: ([16]byte)(ip), port: port}, nil
 	} else {
 		return nil, &net.AddrError{
 			Err:  "unsupported address type",
