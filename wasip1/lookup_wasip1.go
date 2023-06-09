@@ -5,19 +5,17 @@ package wasip1
 import (
 	"net"
 	"os"
-
-	"github.com/stealthrocket/net/internal/syscall"
 )
 
 func lookupAddr(op, network, address string) (net.Addr, error) {
-	var hints syscall.AddrInfo
+	var hints addrInfo
 	switch network {
 	case "tcp", "tcp4", "tcp6":
-		hints.SocketType = syscall.SOCK_STREAM
-		hints.Protocol = syscall.IPPROTO_TCP
+		hints.socketType = SOCK_STREAM
+		hints.protocol = IPPROTO_TCP
 	case "udp", "udp4", "udp6":
-		hints.SocketType = syscall.SOCK_DGRAM
-		hints.Protocol = syscall.IPPROTO_UDP
+		hints.socketType = SOCK_DGRAM
+		hints.protocol = IPPROTO_UDP
 	case "unix", "unixgram":
 		return &net.UnixAddr{Name: address, Net: network}, nil
 	default:
@@ -25,22 +23,22 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 	}
 	switch network {
 	case "tcp", "udp":
-		hints.Family = syscall.AF_UNSPEC
+		hints.family = AF_UNSPEC
 	case "tcp4", "udp4":
-		hints.Family = syscall.AF_INET
+		hints.family = AF_INET
 	case "tcp6", "udp6":
-		hints.Family = syscall.AF_INET6
+		hints.family = AF_INET6
 	}
 	hostname, service, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, net.InvalidAddrError(address)
 	}
 	if op == "listen" && hostname == "" {
-		hints.Flags |= syscall.AI_PASSIVE
+		hints.flags |= AI_PASSIVE
 	}
 
-	results := make([]syscall.AddrInfo, 16)
-	n, err := syscall.Getaddrinfo(hostname, service, hints, results)
+	results := make([]addrInfo, 16)
+	n, err := getaddrinfo(hostname, service, &hints, results)
 	if err != nil {
 		addr := &netAddr{network, address}
 		return nil, newOpError(op, addr, os.NewSyscallError("getaddrinfo", err))
@@ -49,13 +47,13 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 	for _, r := range results {
 		var ip net.IP
 		var port int
-		switch a := r.Address.(type) {
-		case *syscall.SockaddrInet4:
-			ip = a.Addr[:]
-			port = a.Port
-		case *syscall.SockaddrInet6:
-			ip = a.Addr[:]
-			port = a.Port
+		switch a := r.address.(type) {
+		case *sockaddrInet4:
+			ip = a.addr[:]
+			port = a.port
+		case *sockaddrInet6:
+			ip = a.addr[:]
+			port = a.port
 		}
 		switch network {
 		case "tcp", "tcp4", "tcp6":

@@ -37,10 +37,7 @@ func newOpError(op string, addr net.Addr, err error) error {
 	}
 }
 
-type netAddr struct {
-	network string
-	address string
-}
+type netAddr struct{ network, address string }
 
 func (na *netAddr) Network() string { return na.address }
 func (na *netAddr) String() string  { return na.address }
