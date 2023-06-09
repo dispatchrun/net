@@ -27,7 +27,10 @@ jobs:
       with:
         go-version-file: go.mod
         check-latest: true
-
+    - uses: isbang/compose-action@v1.4.1
+      with:
+        services: |
+          redis
     - name: Install Go tip
       run: |
         curl -sL https://storage.googleapis.com/go-build-snap/go/linux-amd64/$(git ls-remote https://github.com/golang/go.git HEAD | awk '{print $1;}').tar.gz -o gotip.tar.gz
