@@ -6,5 +6,6 @@ use (
 	./mysql
 	./postgres
 	./redis
+	./ttrpc
 	./websocket
 )
