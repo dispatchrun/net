@@ -1,6 +1,6 @@
 .PHONY: test lint wasirun
 
-GOPATH = $(shell $(GO) env GOPATH)
+GOPATH ?= $(shell $(GO) env GOPATH)
 
 wasip1.test: go.mod $(wildcard wasip1/*.go)
 	GOARCH=wasm GOOS=wasip1 $(GO) test -c ./wasip1
