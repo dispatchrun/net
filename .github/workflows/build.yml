@@ -30,7 +30,5 @@ jobs:
         ls -lah gotip.tar.gz
         mkdir -p $HOME/gotip
         tar -C $HOME/gotip -xzf gotip.tar.gz
-
-    - run: git config --global url.https://$GH_ACCESS_TOKEN@github.com.insteadOf https://github.com
     - run: make wasirun
-    - run: make test
+    - run: make test GO=$HOME/gotip/bin/go
