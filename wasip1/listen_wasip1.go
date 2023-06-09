@@ -8,11 +8,8 @@ import (
 	"github.com/stealthrocket/net/syscall"
 )
 
-// A Listener is a generic network listener for stream-oriented protocols.
-type Listener = net.Listener
-
 // Listen announces on the local network address.
-func Listen(network, address string) (Listener, error) {
+func Listen(network, address string) (net.Listener, error) {
 	addr, err := lookupAddr("listen", network, address)
 	if err != nil {
 		return nil, err
@@ -20,7 +17,7 @@ func Listen(network, address string) (Listener, error) {
 	return listenAddr(addr)
 }
 
-func listenAddr(addr net.Addr) (Listener, error) {
+func listenAddr(addr net.Addr) (net.Listener, error) {
 	fd, err := syscall.Socket(family(addr), socketType(addr), 0)
 	if err != nil {
 		return nil, fmt.Errorf("Socket: %w", err)
@@ -57,7 +54,7 @@ func listenAddr(addr net.Addr) (Listener, error) {
 }
 
 type listener struct {
-	Listener
+	net.Listener
 	addr net.Addr
 }
 

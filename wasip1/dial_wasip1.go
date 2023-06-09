@@ -16,11 +16,8 @@ func init() {
 	}
 }
 
-// Conn is a generic stream-oriented network connection.
-type Conn = net.Conn
-
 // Dial connects to the address on the named network.
-func Dial(network, address string) (Conn, error) {
+func Dial(network, address string) (net.Conn, error) {
 	addr, err := lookupAddr("dial", network, address)
 	if err != nil {
 		return nil, err
@@ -29,12 +26,32 @@ func Dial(network, address string) (Conn, error) {
 }
 
 // DialContext is a variant of Dial that accepts a context.
-func DialContext(ctx context.Context, network, address string) (Conn, error) {
-	_ = ctx // TODO
-	return Dial(network, address)
+func DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	select {
+	case <-ctx.Done():
+		return nil, &net.OpError{
+			Op:  "dial",
+			Net: network,
+			Addr: &networkAddress{
+				network: network,
+				address: address,
+			},
+			Err: context.Cause(ctx),
+		}
+	default:
+		return Dial(network, address)
+	}
 }
 
-func dialAddr(addr net.Addr) (Conn, error) {
+type networkAddress struct {
+	network string
+	address string
+}
+
+func (na *networkAddress) Network() string { return na.address }
+func (na *networkAddress) String() string  { return na.address }
+
+func dialAddr(addr net.Addr) (net.Conn, error) {
 	proto := family(addr)
 	sotype := socketType(addr)
 
