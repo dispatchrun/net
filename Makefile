@@ -7,7 +7,7 @@ packages.dir = $(wildcard */)
 packages.test = $(packages.dir:/=.test)
 
 test: wasirun $(packages.test)
-	for pkg in $(packages.test); do wasirun $$pkg -test.v || exit 1; done
+	for pkg in $(packages.test); do $(wasirun) $$pkg -test.v || exit 1; done
 
 wasirun: $(wasirun)
 
