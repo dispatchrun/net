@@ -30,5 +30,4 @@ jobs:
         ls -lah gotip.tar.gz
         mkdir -p $HOME/gotip
         tar -C $HOME/gotip -xzf gotip.tar.gz
-    - run: make wasirun
     - run: make test GO=$HOME/gotip/bin/go GOPATH=$HOME/gotip
