@@ -113,7 +113,7 @@ At this time, this is this package defaults to using this approach.
 
 ### Pure Go Resolver
 
-The pure Go name resolver is not currently enabled for GOOS=wasip1.
+The pure Go name resolver is not currently enabled for `GOOS=wasip1`.
 
 The following series of CLs will change this: https://go-review.googlesource.com/c/go/+/500576.
 This will hopefully land in Go v1.22 in ~February 2024.
