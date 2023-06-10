@@ -1,3 +1,7 @@
+[![Build](https://github.com/stealthrocket/net/actions/workflows/wasi-testuite.yml/badge.svg)](https://github.com/stealthrocket/net/actions/workflows/go.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/stealthrocket/net.svg)](https://pkg.go.dev/github.com/stealthrocket/net)
+[![Apache 2 License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
+
 # net
 
 This library provides `net.Dial` and `net.Listen` functions for
