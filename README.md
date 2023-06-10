@@ -1,4 +1,4 @@
-[![Build](https://github.com/stealthrocket/net/actions/workflows/wasi-testuite.yml/badge.svg)](https://github.com/stealthrocket/net/actions/workflows/build.yml)
+[![Build](https://github.com/stealthrocket/net/actions/workflows/build.yml/badge.svg)](https://github.com/stealthrocket/net/actions/workflows/build.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/stealthrocket/net.svg)](https://pkg.go.dev/github.com/stealthrocket/net)
 [![Apache 2 License](https://img.shields.io/badge/license-Apache%202-blue.svg)](LICENSE)
 
