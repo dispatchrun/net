@@ -79,15 +79,6 @@ func socketAddress(addr net.Addr) (sockaddr, error) {
 	}
 }
 
-type conn struct {
-	net.Conn
-	laddr net.Addr
-	raddr net.Addr
-}
-
-func (c *conn) LocalAddr() net.Addr  { return c.laddr }
-func (c *conn) RemoteAddr() net.Addr { return c.raddr }
-
 // In Go 1.21, the net package cannot initialize the local and remote addresses
 // of network connections. For this reason, we use this function to retreive the
 // addresses and return a wrapped net.Conn with LocalAddr/RemoteAddr implemented.
@@ -101,8 +92,6 @@ func makeConn(c net.Conn) (net.Conn, error) {
 		c.Close()
 		return nil, fmt.Errorf("syscall.Conn.SyscallConn: %w", err)
 	}
-	var laddr net.Addr
-	var raddr net.Addr
 	rawConnErr := rawConn.Control(func(fd uintptr) {
 		var addr sockaddr
 		var peer sockaddr
@@ -117,17 +106,8 @@ func makeConn(c net.Conn) (net.Conn, error) {
 			return
 		}
 
-		switch c.(type) {
-		case *net.UnixConn:
-			laddr = sockaddrToUnixAddr(addr)
-			raddr = sockaddrToUnixAddr(peer)
-		case *net.UDPConn:
-			laddr = sockaddrToUDPAddr(addr)
-			raddr = sockaddrToUDPAddr(peer)
-		case *net.TCPConn:
-			laddr = sockaddrToTCPAddr(addr)
-			raddr = sockaddrToTCPAddr(peer)
-		}
+		setNetAddr(c.LocalAddr(), addr)
+		setNetAddr(c.RemoteAddr(), peer)
 	})
 	if err == nil {
 		err = rawConnErr
@@ -136,34 +116,26 @@ func makeConn(c net.Conn) (net.Conn, error) {
 		c.Close()
 		return nil, err
 	}
-	return &conn{c, laddr, raddr}, nil
+	return c, nil
 }
 
-func sockaddrToUnixAddr(addr sockaddr) net.Addr {
+func setNetAddr(dst net.Addr, src sockaddr) {
+	switch a := dst.(type) {
+	case *net.UnixAddr:
+		a.Name = sockaddrName(src)
+	case *net.UDPAddr:
+		a.IP, a.Port = sockaddrIPAndPort(src)
+	case *net.TCPAddr:
+		a.IP, a.Port = sockaddrIPAndPort(src)
+	}
+}
+
+func sockaddrName(addr sockaddr) string {
 	switch a := addr.(type) {
 	case *sockaddrUnix:
-		return &net.UnixAddr{
-			Net:  "unix",
-			Name: a.name,
-		}
+		return a.name
 	default:
-		return nil
-	}
-}
-
-func sockaddrToTCPAddr(addr sockaddr) net.Addr {
-	ip, port := sockaddrIPAndPort(addr)
-	return &net.TCPAddr{
-		IP:   ip,
-		Port: port,
-	}
-}
-
-func sockaddrToUDPAddr(addr sockaddr) net.Addr {
-	ip, port := sockaddrIPAndPort(addr)
-	return &net.UDPAddr{
-		IP:   ip,
-		Port: port,
+		return ""
 	}
 }
 
