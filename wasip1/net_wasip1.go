@@ -45,9 +45,9 @@ func family(addr net.Addr) int {
 
 func socketType(addr net.Addr) (int, error) {
 	switch addr.Network() {
-	case "tcp", "unix":
+	case "tcp", "tcp4", "tcp6", "unix":
 		return SOCK_STREAM, nil
-	case "udp", "unixgram":
+	case "udp", "udp4", "udp6", "unixgram":
 		return SOCK_DGRAM, nil
 	default:
 		return -1, syscall.EPROTOTYPE
