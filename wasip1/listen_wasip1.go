@@ -73,12 +73,12 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		return nil, err
 	}
 	setNetAddr(l.Addr(), sockaddr)
-	return listener{l}, nil
+	return &listener{l}, nil
 }
 
 type listener struct{ net.Listener }
 
-func (l listener) Accept() (net.Conn, error) {
+func (l *listener) Accept() (net.Conn, error) {
 	c, err := l.Listener.Accept()
 	if err != nil {
 		return nil, err
