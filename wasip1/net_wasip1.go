@@ -26,14 +26,14 @@ func (na *netAddr) String() string  { return na.address }
 func family(addr net.Addr) int {
 	var ip net.IP
 	switch a := addr.(type) {
-	case *net.UnixAddr:
-		return AF_UNIX
+	case *net.IPAddr:
+		ip = a.IP
 	case *net.TCPAddr:
 		ip = a.IP
 	case *net.UDPAddr:
 		ip = a.IP
-	case *net.IPAddr:
-		ip = a.IP
+	case *net.UnixAddr:
+		return AF_UNIX
 	}
 	if ip.To4() != nil {
 		return AF_INET
@@ -45,7 +45,7 @@ func family(addr net.Addr) int {
 
 func socketType(addr net.Addr) (int, error) {
 	switch addr.Network() {
-	case "tcp", "tcp4", "tcp6", "unix":
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		return SOCK_STREAM, nil
 	case "udp", "udp4", "udp6", "unixgram":
 		return SOCK_DGRAM, nil
@@ -58,14 +58,14 @@ func socketAddress(addr net.Addr) (sockaddr, error) {
 	var ip net.IP
 	var port int
 	switch a := addr.(type) {
-	case *net.UnixAddr:
-		return &sockaddrUnix{name: a.Name}, nil
+	case *net.IPAddr:
+		ip = a.IP
 	case *net.TCPAddr:
 		ip, port = a.IP, a.Port
 	case *net.UDPAddr:
 		ip, port = a.IP, a.Port
-	case *net.IPAddr:
-		ip = a.IP
+	case *net.UnixAddr:
+		return &sockaddrUnix{name: a.Name}, nil
 	}
 	if ipv4 := ip.To4(); ipv4 != nil {
 		return &sockaddrInet4{addr: ([4]byte)(ipv4), port: port}, nil
@@ -121,12 +121,14 @@ func makeConn(c net.Conn) (net.Conn, error) {
 
 func setNetAddr(dst net.Addr, src sockaddr) {
 	switch a := dst.(type) {
-	case *net.UnixAddr:
-		a.Name = sockaddrName(src)
-	case *net.UDPAddr:
-		a.IP, a.Port = sockaddrIPAndPort(src)
+	case *net.IPAddr:
+		a.IP, _ = sockaddrIPAndPort(src)
 	case *net.TCPAddr:
 		a.IP, a.Port = sockaddrIPAndPort(src)
+	case *net.UDPAddr:
+		a.IP, a.Port = sockaddrIPAndPort(src)
+	case *net.UnixAddr:
+		a.Name = sockaddrName(src)
 	}
 }
 
