@@ -26,14 +26,14 @@ func (na *netAddr) String() string  { return na.address }
 func family(addr net.Addr) int {
 	var ip net.IP
 	switch a := addr.(type) {
-	case *net.UnixAddr:
-		return AF_UNIX
+	case *net.IPAddr:
+		ip = a.IP
 	case *net.TCPAddr:
 		ip = a.IP
 	case *net.UDPAddr:
 		ip = a.IP
-	case *net.IPAddr:
-		ip = a.IP
+	case *net.UnixAddr:
+		return AF_UNIX
 	}
 	if ip.To4() != nil {
 		return AF_INET
@@ -45,7 +45,7 @@ func family(addr net.Addr) int {
 
 func socketType(addr net.Addr) (int, error) {
 	switch addr.Network() {
-	case "tcp", "tcp4", "tcp6", "unix":
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		return SOCK_STREAM, nil
 	case "udp", "udp4", "udp6", "unixgram":
 		return SOCK_DGRAM, nil
@@ -58,14 +58,14 @@ func socketAddress(addr net.Addr) (sockaddr, error) {
 	var ip net.IP
 	var port int
 	switch a := addr.(type) {
-	case *net.UnixAddr:
-		return &sockaddrUnix{name: a.Name}, nil
+	case *net.IPAddr:
+		ip = a.IP
 	case *net.TCPAddr:
 		ip, port = a.IP, a.Port
 	case *net.UDPAddr:
 		ip, port = a.IP, a.Port
-	case *net.IPAddr:
-		ip = a.IP
+	case *net.UnixAddr:
+		return &sockaddrUnix{name: a.Name}, nil
 	}
 	if ipv4 := ip.To4(); ipv4 != nil {
 		return &sockaddrInet4{addr: ([4]byte)(ipv4), port: port}, nil
@@ -78,15 +78,6 @@ func socketAddress(addr net.Addr) (sockaddr, error) {
 		}
 	}
 }
-
-type conn struct {
-	net.Conn
-	laddr net.Addr
-	raddr net.Addr
-}
-
-func (c *conn) LocalAddr() net.Addr  { return c.laddr }
-func (c *conn) RemoteAddr() net.Addr { return c.raddr }
 
 // In Go 1.21, the net package cannot initialize the local and remote addresses
 // of network connections. For this reason, we use this function to retreive the
@@ -101,8 +92,6 @@ func makeConn(c net.Conn) (net.Conn, error) {
 		c.Close()
 		return nil, fmt.Errorf("syscall.Conn.SyscallConn: %w", err)
 	}
-	var laddr net.Addr
-	var raddr net.Addr
 	rawConnErr := rawConn.Control(func(fd uintptr) {
 		var addr sockaddr
 		var peer sockaddr
@@ -117,17 +106,8 @@ func makeConn(c net.Conn) (net.Conn, error) {
 			return
 		}
 
-		switch c.(type) {
-		case *net.UnixConn:
-			laddr = sockaddrToUnixAddr(addr)
-			raddr = sockaddrToUnixAddr(peer)
-		case *net.UDPConn:
-			laddr = sockaddrToUDPAddr(addr)
-			raddr = sockaddrToUDPAddr(peer)
-		case *net.TCPConn:
-			laddr = sockaddrToTCPAddr(addr)
-			raddr = sockaddrToTCPAddr(peer)
-		}
+		setNetAddr(c.LocalAddr(), addr)
+		setNetAddr(c.RemoteAddr(), peer)
 	})
 	if err == nil {
 		err = rawConnErr
@@ -136,34 +116,28 @@ func makeConn(c net.Conn) (net.Conn, error) {
 		c.Close()
 		return nil, err
 	}
-	return &conn{c, laddr, raddr}, nil
+	return c, nil
 }
 
-func sockaddrToUnixAddr(addr sockaddr) net.Addr {
+func setNetAddr(dst net.Addr, src sockaddr) {
+	switch a := dst.(type) {
+	case *net.IPAddr:
+		a.IP, _ = sockaddrIPAndPort(src)
+	case *net.TCPAddr:
+		a.IP, a.Port = sockaddrIPAndPort(src)
+	case *net.UDPAddr:
+		a.IP, a.Port = sockaddrIPAndPort(src)
+	case *net.UnixAddr:
+		a.Name = sockaddrName(src)
+	}
+}
+
+func sockaddrName(addr sockaddr) string {
 	switch a := addr.(type) {
 	case *sockaddrUnix:
-		return &net.UnixAddr{
-			Net:  "unix",
-			Name: a.name,
-		}
+		return a.name
 	default:
-		return nil
-	}
-}
-
-func sockaddrToTCPAddr(addr sockaddr) net.Addr {
-	ip, port := sockaddrIPAndPort(addr)
-	return &net.TCPAddr{
-		IP:   ip,
-		Port: port,
-	}
-}
-
-func sockaddrToUDPAddr(addr sockaddr) net.Addr {
-	ip, port := sockaddrIPAndPort(addr)
-	return &net.UDPAddr{
-		IP:   ip,
-		Port: port,
+		return ""
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	networks := []string{"tcp", "tcp4", "tcp6", "unix"}
+	networks := []string{"tcp", "tcp4", "tcp6"}
 	for i := range networks {
 		network := networks[i]
 		mysql.RegisterDialContext(network, func(ctx context.Context, address string) (net.Conn, error) {

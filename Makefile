@@ -1,4 +1,4 @@
-.PHONY: proto test lint wasirun
+.PHONY: clean proto test lint wasirun
 
 GO ?= go
 GOPATH ?= $(shell $(GO) env GOPATH)
@@ -21,6 +21,9 @@ grpc.pb.go = $(grpc.proto:.proto=_grpc.pb.go)
 # go install github.com/containerd/ttrpc/cmd/protoc-gen-go-ttrpc@latest
 ttrpc.proto = $(wildcard ttrpc/*.proto)
 ttrpc.pb.go = $(ttrpc.proto:.proto=_ttrpc.pb.go)
+
+clean:
+	rm -f *.test
 
 proto: $(grpc.pb.go) $(ttrpc.pb.go)
 
