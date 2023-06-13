@@ -10,9 +10,14 @@ This library provides `net.Dial` and `net.Listen` functions for
 Applications built with this library are compatible with [WasmEdge][wasmedge]
 and [stealthrocket/wasi-go][wasi-go].
 
+[gotip]: https://pkg.go.dev/golang.org/dl/gotip
 [wasi-go]: https://github.com/stealthrocket/wasi-go
 [wasip1]: https://tip.golang.org/doc/go1.21#wasip1
 [wasmedge]: https://github.com/WasmEdge/WasmEdge
+
+_Note: GOOS=wasip1 will be released in Go 1.21. At this time you would need to
+use [gotip][gotip] to get the latest version of the Go compiler in order to use
+this package._
 
 ## Motivation
 
