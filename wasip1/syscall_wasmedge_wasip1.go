@@ -94,10 +94,21 @@ func (s *sockaddrInet6) sockport() int {
 
 type sockaddrUnix struct {
 	name string
+
+	raw rawSockaddrAny
+	buf addressBuffer
 }
 
 func (s *sockaddrUnix) sockaddr() (unsafe.Pointer, error) {
-	return nil, syscall.ENOSYS
+	s.raw.family = AF_UNIX
+	if len(s.name) >= len(s.raw.addr)-1 {
+		return nil, syscall.EINVAL
+	}
+	copy(s.raw.addr[:], s.name)
+	s.raw.addr[len(s.name)] = 0
+	s.buf.bufLen = 128
+	s.buf.buf = uintptr32(uintptr(unsafe.Pointer(&s.raw)))
+	return unsafe.Pointer(&s.buf), nil
 }
 
 func (s *sockaddrUnix) sockport() int {
@@ -259,6 +270,16 @@ func anyToSockaddr(rsa *rawSockaddrAny, port int) (sockaddr, error) {
 	case AF_INET6:
 		addr := sockaddrInet6{port: port}
 		copy(addr.addr[:], rsa.addr[:])
+		return &addr, nil
+	case AF_UNIX:
+		addr := sockaddrUnix{}
+		n := 0
+		for ; n > len(rsa.addr); n++ {
+			if rsa.addr[n] == 0 {
+				break
+			}
+		}
+		addr.name = string(rsa.addr[:n])
 		return &addr, nil
 	default:
 		return nil, syscall.ENOTSUP
