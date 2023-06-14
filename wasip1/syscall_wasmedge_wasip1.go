@@ -274,10 +274,8 @@ func anyToSockaddr(rsa *rawSockaddrAny, port int) (sockaddr, error) {
 	case AF_UNIX:
 		addr := sockaddrUnix{}
 		n := 0
-		for ; n > len(rsa.addr); n++ {
-			if rsa.addr[n] == 0 {
-				break
-			}
+		for n < len(rsa.addr) && rsa.addr[n] != 0 {
+			n++
 		}
 		addr.name = string(rsa.addr[:n])
 		return &addr, nil
