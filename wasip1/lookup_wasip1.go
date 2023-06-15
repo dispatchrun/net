@@ -52,6 +52,9 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 	if err != nil {
 		return nil, net.InvalidAddrError(address)
 	}
+	if ip := net.ParseIP(hostname); ip != nil {
+		hints.flags |= AI_NUMERICHOST
+	}
 	if op == "listen" && hostname == "" {
 		hints.flags |= AI_PASSIVE
 	}
