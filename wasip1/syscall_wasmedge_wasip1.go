@@ -378,8 +378,8 @@ func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int
 			r.address = &r.inet4addr
 		case AF_INET6:
 			r.inet6addr.port = int(port)
+			copy(r.inet6addr.addr[:], results[i].sockData[2:])
 			r.address = &r.inet6addr
-			copy(r.inet4addr.addr[:], results[i].sockData[2:])
 		default:
 			r.address = nil
 		}
