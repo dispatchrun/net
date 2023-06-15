@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"strconv"
 )
 
 func dialResolverNotSupported(ctx context.Context, network, address string) (net.Conn, error) {
@@ -54,6 +55,9 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 	}
 	if ip := net.ParseIP(hostname); ip != nil {
 		hints.flags |= AI_NUMERICHOST
+	}
+	if _, err = strconv.Atoi(service); err == nil {
+		hints.flags |= AI_NUMERICSERV
 	}
 	if op == "listen" && hostname == "" {
 		hints.flags |= AI_PASSIVE
