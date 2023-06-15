@@ -124,7 +124,7 @@ At this time, this is this package defaults to using this approach.
 
 The pure Go name resolver is not currently enabled for `GOOS=wasip1`.
 
-The following series of CLs will change this: https://go-review.googlesource.com/c/go/+/500576.
+The following series of CLs will change this: https://go-review.googlesource.com/c/go/+/500579.
 This will hopefully land in Go v1.22 in ~February 2024.
 
 If you're using a version of Go that has the CL's included, you can
