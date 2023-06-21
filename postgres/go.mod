@@ -13,5 +13,3 @@ require (
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 )
-
-replace github.com/lib/pq => github.com/stealthrocket/pq v0.0.0-20230609191514-73472796856a
