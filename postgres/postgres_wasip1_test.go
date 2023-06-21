@@ -3,28 +3,39 @@
 package postgres_test
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"testing"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/stealthrocket/net/wasip1"
 )
 
+func init() {
+
+}
+
 func TestPostgres(t *testing.T) {
-	connector, err := pq.NewConnector("user=pqgotest password=password dbname=test sslmode=disable")
+	config, err := pgx.ParseConfig("postgres://pqgotest:password@localhost:5432/test?sslmode=disable")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	deadline, _ := t.Deadline()
 	// Here we configure a custom dialer for the postgres connector in order to
 	// use the dial functions from github.com/stealthrocket/net/wasip1.
-	connector.Dialer(&wasip1.Dialer{
-		Deadline: deadline,
-	})
+	config.DialFunc = wasip1.DialContext
+	// Avoid using the default net.LookupHost function which is not currently
+	// supported on GOOS=wasip1.
+	config.LookupFunc = func(ctx context.Context, host string) (addrs []string, err error) {
+		return []string{host}, nil
+	}
+	connect := stdlib.RegisterConnConfig(config)
 
-	db := sql.OpenDB(connector)
+	db, err := sql.Open("pgx", connect)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer db.Close()
 
 	row := db.QueryRow("select version()")
