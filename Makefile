@@ -9,7 +9,7 @@ packages.test = $(packages.dir:/=.test)
 test: proto wasirun $(packages.test)
 	@for pkg in $(packages.test); do \
 		tmp=$$(mktemp); \
-		$(wasirun) $$pkg > $$tmp; \
+		$(wasirun) --dir=/ $$pkg > $$tmp; \
 		if (($$?)); then cat $$tmp; exit 1; else printf "ok\tgithub.com/stealthrocket/net/$$pkg\n"; fi \
 	done
 

@@ -4,7 +4,6 @@ package wasip1_test
 
 import (
 	"net"
-	"path"
 	"testing"
 
 	"github.com/stealthrocket/net/wasip1"
@@ -12,8 +11,6 @@ import (
 )
 
 func TestConn(t *testing.T) {
-	unixSocket := path.Join(t.TempDir(), "wasip1.sock")
-
 	// TODO: for now only the TCP tests pass due to limitations in Go 1.21, see:
 	// https://github.com/golang/go/blob/39effbc105f5c54117a6011af3c48e3c8f14eca9/src/net/file_wasip1.go#L33-L55
 	//
@@ -34,10 +31,6 @@ func TestConn(t *testing.T) {
 		{
 			network: "tcp6",
 			address: ":0",
-		},
-		{
-			network: "unix",
-			address: unixSocket,
 		},
 	}
 
