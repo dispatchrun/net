@@ -13,10 +13,6 @@ import (
 	"github.com/stealthrocket/net/wasip1"
 )
 
-func init() {
-
-}
-
 func TestPostgres(t *testing.T) {
 	config, err := pgx.ParseConfig("postgres://pqgotest:password@localhost:5432/test?sslmode=disable")
 	if err != nil {
