@@ -57,8 +57,8 @@ type sockaddr interface {
 }
 
 type sockaddrInet4 struct {
-	port int
 	addr [4]byte
+	port uint32
 	raw  addressBuffer
 }
 
@@ -69,13 +69,13 @@ func (s *sockaddrInet4) sockaddr() (unsafe.Pointer, error) {
 }
 
 func (s *sockaddrInet4) sockport() int {
-	return s.port
+	return int(s.port)
 }
 
 type sockaddrInet6 struct {
-	port int
-	zone uint32
 	addr [16]byte
+	port uint32
+	zone uint32
 	raw  addressBuffer
 }
 
@@ -89,14 +89,13 @@ func (s *sockaddrInet6) sockaddr() (unsafe.Pointer, error) {
 }
 
 func (s *sockaddrInet6) sockport() int {
-	return s.port
+	return int(s.port)
 }
 
 type sockaddrUnix struct {
 	name string
-
-	raw rawSockaddrAny
-	buf addressBuffer
+	raw  rawSockaddrAny
+	buf  addressBuffer
 }
 
 func (s *sockaddrUnix) sockaddr() (unsafe.Pointer, error) {
@@ -264,11 +263,11 @@ func getpeername(fd int) (sockaddr, error) {
 func anyToSockaddr(rsa *rawSockaddrAny, port int) (sockaddr, error) {
 	switch rsa.family {
 	case AF_INET:
-		addr := sockaddrInet4{port: port}
+		addr := sockaddrInet4{port: uint32(port)}
 		copy(addr.addr[:], rsa.addr[:])
 		return &addr, nil
 	case AF_INET6:
-		addr := sockaddrInet6{port: port}
+		addr := sockaddrInet6{port: uint32(port)}
 		copy(addr.addr[:], rsa.addr[:])
 		return &addr, nil
 	case AF_UNIX:
@@ -373,11 +372,11 @@ func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int
 		port := binary.BigEndian.Uint16(results[i].sockData[:2])
 		switch results[i].sockAddr.sa_family {
 		case AF_INET:
-			r.inet4addr.port = int(port)
+			r.inet4addr.port = uint32(port)
 			copy(r.inet4addr.addr[:], results[i].sockData[2:])
 			r.address = &r.inet4addr
 		case AF_INET6:
-			r.inet6addr.port = int(port)
+			r.inet6addr.port = uint32(port)
 			copy(r.inet6addr.addr[:], results[i].sockData[2:])
 			r.address = &r.inet6addr
 		default:
