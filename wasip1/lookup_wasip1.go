@@ -43,7 +43,7 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 	}
 	switch network {
 	case "tcp", "udp":
-		hints.family = AF_UNSPEC
+		hints.family = AF_INET
 	case "tcp4", "udp4":
 		hints.family = AF_INET
 	case "tcp6", "udp6":
@@ -76,10 +76,10 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 		switch a := r.address.(type) {
 		case *sockaddrInet4:
 			ip = a.addr[:]
-			port = a.port
+			port = int(a.port)
 		case *sockaddrInet6:
 			ip = a.addr[:]
-			port = a.port
+			port = int(a.port)
 		}
 		switch network {
 		case "tcp", "tcp4", "tcp6":
