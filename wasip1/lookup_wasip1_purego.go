@@ -3,7 +3,7 @@
 package wasip1
 
 import (
-	"fmt"
+	"context"
 	"net"
 )
 
@@ -11,66 +11,66 @@ func init() {
 	net.DefaultResolver.Dial = DialContext
 }
 
-func lookupAddr(context, network, address string) (net.Addr, error) {
+func lookupAddr(ctx context.Context, op, network, address string) ([]net.Addr, error) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 	case "udp", "udp4", "udp6":
 	case "unix", "unixgram":
-		return &net.UnixAddr{Name: address, Net: network}, nil
+		return []net.Addr{&net.UnixAddr{Name: address, Net: network}}, nil
 	default:
 		return nil, net.UnknownNetworkError(network)
 	}
+
 	hostname, service, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, net.InvalidAddrError(address)
 	}
-	port, err := net.LookupPort(network, service)
+
+	port, err := net.DefaultResolver.LookupPort(ctx, network, service)
 	if err != nil {
 		return nil, err
 	}
+
 	if hostname == "" {
-		if context == "listen" {
+		if op == "listen" {
 			switch network {
 			case "tcp", "tcp4":
-				return &net.TCPAddr{IP: net.IPv4zero, Port: port}, nil
+				return []net.Addr{&net.TCPAddr{IP: net.IPv4zero, Port: port}}, nil
 			case "tcp6":
-				return &net.TCPAddr{IP: net.IPv6zero, Port: port}, nil
+				return []net.Addr{&net.TCPAddr{IP: net.IPv6zero, Port: port}}, nil
 			}
 		}
-		return nil, fmt.Errorf("invalid address %q for %s", address, context)
+		return nil, net.InvalidAddrError(address)
 	}
-	ips, err := net.LookupIP(hostname)
+
+	ipAddrs, err := net.DefaultResolver.LookupIPAddr(ctx, hostname)
 	if err != nil {
 		return nil, err
 	}
-	if network == "tcp" || network == "tcp4" {
-		for _, ip := range ips {
-			if len(ip) == net.IPv4len {
-				return &net.TCPAddr{IP: ip, Port: port}, nil
-			}
+
+	addrs := make([]net.Addr, 0, len(ipAddrs))
+	switch network {
+	case "tcp", "tcp4", "tcp6":
+		for _, ipAddr := range ipAddrs {
+			addrs = append(addrs, &net.TCPAddr{
+				IP:   ipAddr.IP,
+				Zone: ipAddr.Zone,
+				Port: port,
+			})
+		}
+	case "udp", "udp4", "udp6":
+		for _, ipAddr := range ipAddrs {
+			addrs = append(addrs, &net.UDPAddr{
+				IP:   ipAddr.IP,
+				Zone: ipAddr.Zone,
+				Port: port,
+			})
 		}
 	}
-	if network == "tcp" || network == "tcp6" {
-		for _, ip := range ips {
-			if len(ip) == net.IPv6len {
-				return &net.TCPAddr{IP: ip, Port: port}, nil
-			}
-		}
+	if len(addrs) != 0 {
+		return addrs, nil
 	}
-	if network == "udp" || network == "udp4" {
-		for _, ip := range ips {
-			if len(ip) == net.IPv4len {
-				return &net.UDPAddr{IP: ip, Port: port}, nil
-			}
-		}
-	}
-	if network == "udp" || network == "udp6" {
-		for _, ip := range ips {
-			if len(ip) == net.IPv6len {
-				return &net.UDPAddr{IP: ip, Port: port}, nil
-			}
-		}
-	}
+
 	return nil, &net.DNSError{
 		Err:        "lookup failed",
 		Name:       hostname,

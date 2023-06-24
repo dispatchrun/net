@@ -27,8 +27,9 @@ func init() {
 	net.DefaultResolver.Dial = dialResolverNotSupported
 }
 
-func lookupAddr(op, network, address string) (net.Addr, error) {
+func lookupAddr(ctx context.Context, op, network, address string) ([]net.Addr, error) {
 	var hints addrInfo
+
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 		hints.socketType = SOCK_STREAM
@@ -37,10 +38,11 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 		hints.socketType = SOCK_DGRAM
 		hints.protocol = IPPROTO_UDP
 	case "unix", "unixgram":
-		return &net.UnixAddr{Name: address, Net: network}, nil
+		return []net.Addr{&net.UnixAddr{Name: address, Net: network}}, nil
 	default:
 		return nil, net.UnknownNetworkError(network)
 	}
+
 	switch network {
 	case "tcp", "udp":
 		hints.family = AF_UNSPEC
@@ -49,9 +51,10 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 	case "tcp6", "udp6":
 		hints.family = AF_INET6
 	}
+
 	hostname, service, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, net.InvalidAddrError(address)
+		return nil, err
 	}
 	if ip := net.ParseIP(hostname); ip != nil {
 		hints.flags |= AI_NUMERICHOST
@@ -63,14 +66,15 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 		hints.flags |= AI_PASSIVE
 	}
 
-	results := make([]addrInfo, 16)
+	results := make([]addrInfo, 8)
 	n, err := getaddrinfo(hostname, service, &hints, results)
 	if err != nil {
 		addr := &netAddr{network, address}
 		return nil, newOpError(op, addr, os.NewSyscallError("getaddrinfo", err))
 	}
-	results = results[:n]
-	for _, r := range results {
+
+	addrs := make([]net.Addr, 0, n)
+	for _, r := range results[:n] {
 		var ip net.IP
 		var port int
 		switch a := r.address.(type) {
@@ -83,11 +87,15 @@ func lookupAddr(op, network, address string) (net.Addr, error) {
 		}
 		switch network {
 		case "tcp", "tcp4", "tcp6":
-			return &net.TCPAddr{IP: ip, Port: port}, nil
+			addrs = append(addrs, &net.TCPAddr{IP: ip, Port: port})
 		case "udp", "udp4", "udp6":
-			return &net.UDPAddr{IP: ip, Port: port}, nil
+			addrs = append(addrs, &net.UDPAddr{IP: ip, Port: port})
 		}
 	}
+	if len(addrs) != 0 {
+		return addrs, nil
+	}
+
 	return nil, &net.DNSError{
 		Err:        "lookup failed",
 		Name:       hostname,

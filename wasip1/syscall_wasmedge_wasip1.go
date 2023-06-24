@@ -344,7 +344,7 @@ func getaddrinfo(name, service string, hints *addrInfo, results []addrInfo) (int
 			ai_canonnamelen: uint32(unsafe.Sizeof(addrInfo{}.cannoname)),
 		}
 		if i > 0 {
-			results[i-1].sockAddrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i-1].sockAddrInfo)))
+			results[i-1].sockAddrInfo.ai_next = uintptr32(uintptr(unsafe.Pointer(&results[i].sockAddrInfo)))
 		}
 	}
 

@@ -30,3 +30,13 @@ services:
       POSTGRES_PASSWORD: password
     ports:
     - '5432:5432'
+
+  coredns:
+    image: coredns/coredns:1.10.1
+    command:
+    - '-conf=/etc/coredns/Corefile'
+    ports:
+    - '5453:53/tcp'
+    - '5453:53/udp'
+    volumes:
+    - ./testdata/etc/coredns:/etc/coredns
