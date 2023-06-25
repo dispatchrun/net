@@ -73,8 +73,7 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	setNetAddr(l.Addr(), sockaddr)
-	return &listener{l}, nil
+	return makeListener(l, sockaddr), nil
 }
 
 type listener struct{ net.Listener }
@@ -85,4 +84,24 @@ func (l *listener) Accept() (net.Conn, error) {
 		return nil, err
 	}
 	return makeConn(c)
+}
+
+type unixListener struct {
+	listener
+	addr net.UnixAddr
+}
+
+func (l *unixListener) Addr() net.Addr {
+	return &l.addr
+}
+
+func makeListener(l net.Listener, addr sockaddr) net.Listener {
+	switch addr.(type) {
+	case *sockaddrUnix:
+		l = &unixListener{listener: listener{l}}
+	default:
+		l = &listener{l}
+	}
+	setNetAddr(l.Addr(), addr)
+	return l
 }

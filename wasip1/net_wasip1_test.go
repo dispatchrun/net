@@ -4,6 +4,7 @@ package wasip1_test
 
 import (
 	"net"
+	"path/filepath"
 	"testing"
 
 	"github.com/stealthrocket/net/wasip1"
@@ -11,11 +12,6 @@ import (
 )
 
 func TestConn(t *testing.T) {
-	// TODO: for now only the TCP tests pass due to limitations in Go 1.21, see:
-	// https://github.com/golang/go/blob/39effbc105f5c54117a6011af3c48e3c8f14eca9/src/net/file_wasip1.go#L33-L55
-	//
-	// Once https://go-review.googlesource.com/c/go/+/500578 is merged, we will
-	// be able to test udp and unix networks as well.
 	tests := []struct {
 		network string
 		address string
@@ -32,12 +28,24 @@ func TestConn(t *testing.T) {
 			network: "tcp6",
 			address: ":0",
 		},
+		{
+			network: "unix",
+			address: ":0",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.network, func(t *testing.T) {
 			nettest.TestConn(t, func() (c1, c2 net.Conn, stop func(), err error) {
-				l, err := wasip1.Listen(test.network, test.address)
+				network := test.network
+				address := test.address
+
+				switch network {
+				case "unix":
+					address = filepath.Join(t.TempDir(), address)
+				}
+
+				l, err := wasip1.Listen(network, address)
 				if err != nil {
 					return nil, nil, nil, err
 				}
@@ -57,8 +65,8 @@ func TestConn(t *testing.T) {
 				dialer := &wasip1.Dialer{}
 				dialer.Deadline, _ = t.Deadline()
 
-				address := l.Addr()
-				c1, err = dialer.Dial(address.Network(), address.String())
+				laddr := l.Addr()
+				c1, err = dialer.Dial(laddr.Network(), laddr.String())
 				if err != nil {
 					return nil, nil, nil, err
 				}
