@@ -80,10 +80,10 @@ func lookupAddr(ctx context.Context, op, network, address string) ([]net.Addr, e
 		switch a := r.address.(type) {
 		case *sockaddrInet4:
 			ip = a.addr[:]
-			port = a.port
+			port = int(a.port)
 		case *sockaddrInet6:
 			ip = a.addr[:]
-			port = a.port
+			port = int(a.port)
 		}
 		switch network {
 		case "tcp", "tcp4", "tcp6":
