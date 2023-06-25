@@ -3,6 +3,7 @@
 package wasip1
 
 import (
+	"context"
 	"net"
 	"os"
 	"syscall"
@@ -10,14 +11,14 @@ import (
 
 // Listen announces on the local network address.
 func Listen(network, address string) (net.Listener, error) {
-	addr, err := lookupAddr("listen", network, address)
+	addrs, err := lookupAddr(context.Background(), "listen", network, address)
 	if err != nil {
 		addr := &netAddr{network, address}
 		return nil, listenErr(addr, err)
 	}
-	lstn, err := listenAddr(addr)
+	lstn, err := listenAddr(addrs[0])
 	if err != nil {
-		return nil, listenErr(addr, err)
+		return nil, listenErr(addrs[0], err)
 	}
 	return lstn, nil
 }

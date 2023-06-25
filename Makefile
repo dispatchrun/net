@@ -4,12 +4,12 @@ GO ?= gotip
 GOPATH ?= $(shell $(GO) env GOPATH)
 wasirun = $(GOPATH)/bin/wasirun
 
-packages.dir = $(wildcard */)
+packages.dir = $(filter-out testdata/,$(wildcard */))
 packages.test = $(packages.dir:/=.test)
 test: proto wasirun $(packages.test)
 	@for pkg in $(packages.test); do \
 		tmp=$$(mktemp); \
-		$(wasirun) --dir=/ $$pkg > $$tmp; \
+		$(wasirun) --dir=/ --dns-server=127.0.0.1:5453 $$pkg > $$tmp; \
 		if (($$?)); then cat $$tmp; exit 1; else printf "ok\tgithub.com/stealthrocket/net/$$pkg\n"; fi \
 	done
 

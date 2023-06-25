@@ -1,0 +1,9 @@
+. {
+  log
+  errors
+  hosts {
+        fe80::ec34:70ff:fe53:470e example.com
+        10.0.0.1 example.com
+        10.0.0.2 example.com
+  }
+}
