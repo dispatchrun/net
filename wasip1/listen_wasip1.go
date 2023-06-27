@@ -4,6 +4,7 @@ package wasip1
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os"
 	"syscall"
@@ -42,8 +43,13 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		return nil, os.NewSyscallError("setnonblock", err)
 	}
 	if err := setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1); err != nil {
-		syscall.Close(fd)
-		return nil, os.NewSyscallError("setsockopt", err)
+		// The runtime may not support the option; if that's the case and the
+		// address is already in use, binding the socket will fail and we will
+		// report the error then.
+		if !errors.Is(err, syscall.EINVAL) {
+			syscall.Close(fd)
+			return nil, os.NewSyscallError("setsockopt", err)
+		}
 	}
 
 	bindAddr, err := socketAddress(addr)
