@@ -4,6 +4,7 @@ package wasip1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -126,8 +127,15 @@ func dialAddr(ctx context.Context, addr net.Addr) (net.Conn, error) {
 	}
 	if sotype == SOCK_DGRAM && proto != AF_UNIX {
 		if err := setsockopt(fd, SOL_SOCKET, SO_BROADCAST, 1); err != nil {
-			syscall.Close(fd)
-			return nil, os.NewSyscallError("setsockopt", err)
+			// If the system does not support broadcast we should still be able
+			// to use the datagram socket.
+			switch {
+			case errors.Is(err, syscall.EINVAL):
+			case errors.Is(err, syscall.ENOPROTOOPT):
+			default:
+				syscall.Close(fd)
+				return nil, os.NewSyscallError("setsockopt", err)
+			}
 		}
 	}
 
