@@ -46,7 +46,10 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 		// The runtime may not support the option; if that's the case and the
 		// address is already in use, binding the socket will fail and we will
 		// report the error then.
-		if !errors.Is(err, syscall.EINVAL) {
+		switch {
+		case errors.Is(err, syscall.ENOPROTOOPT):
+		case errors.Is(err, syscall.EINVAL):
+		default:
 			syscall.Close(fd)
 			return nil, os.NewSyscallError("setsockopt", err)
 		}
