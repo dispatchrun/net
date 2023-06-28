@@ -160,6 +160,31 @@ func sock_getlocaladdr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) sysca
 //go:noescape
 func sock_getpeeraddr(fd int32, addr unsafe.Pointer, port unsafe.Pointer) syscall.Errno
 
+//go:wasmimport wasi_snapshot_preview1 sock_recv_from
+//go:noescape
+func sock_recv_from(
+	fd int32,
+	iovs unsafe.Pointer,
+	iovsCount int32,
+	addr unsafe.Pointer,
+	iflags int32,
+	port unsafe.Pointer,
+	nread unsafe.Pointer,
+	oflags unsafe.Pointer,
+) syscall.Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_send_to
+//go:noescape
+func sock_send_to(
+	fd int32,
+	iovs unsafe.Pointer,
+	iovsCount int32,
+	addr unsafe.Pointer,
+	port int32,
+	flags int32,
+	nwritten unsafe.Pointer,
+) syscall.Errno
+
 //go:wasmimport wasi_snapshot_preview1 sock_getaddrinfo
 //go:noescape
 func sock_getaddrinfo(
@@ -172,6 +197,9 @@ func sock_getaddrinfo(
 	maxResLen uint32,
 	resLen unsafe.Pointer,
 ) syscall.Errno
+
+//go:wasmimport wasi_snapshot_preview1 sock_shutdown
+func sock_shutdown(fd, how int32) syscall.Errno
 
 func socket(proto, sotype, unused int) (fd int, err error) {
 	var newfd int32
@@ -210,6 +238,81 @@ func connect(fd int, sa sockaddr) error {
 	errno := sock_connect(int32(fd), rawaddr, uint32(sa.sockport()))
 	runtime.KeepAlive(sa)
 	if errno != 0 {
+		return errno
+	}
+	return nil
+}
+
+type iovec struct {
+	ptr uintptr32
+	len uint32
+}
+
+func recvfrom(fd int, iovs [][]byte, flags int32) (n int, addr rawSockaddrAny, port, oflags int32, err error) {
+	iovsBuf := make([]iovec, 0, 8)
+	for _, iov := range iovs {
+		iovsBuf = append(iovsBuf, iovec{
+			ptr: uintptr32(uintptr(unsafe.Pointer(unsafe.SliceData(iov)))),
+			len: uint32(len(iov)),
+		})
+	}
+	addrBuf := addressBuffer{
+		buf:    uintptr32(uintptr(unsafe.Pointer(&addr))),
+		bufLen: uint32(unsafe.Sizeof(addr)),
+	}
+	nread := int32(0)
+	errno := sock_recv_from(
+		int32(fd),
+		unsafe.Pointer(unsafe.SliceData(iovsBuf)),
+		int32(len(iovsBuf)),
+		unsafe.Pointer(&addrBuf),
+		flags,
+		unsafe.Pointer(&port),
+		unsafe.Pointer(&nread),
+		unsafe.Pointer(&oflags),
+	)
+	if errno != 0 {
+		return int(nread), addr, port, oflags, errno
+	}
+	runtime.KeepAlive(addrBuf)
+	runtime.KeepAlive(iovsBuf)
+	runtime.KeepAlive(iovs)
+	return int(nread), addr, port, oflags, nil
+}
+
+func sendto(fd int, iovs [][]byte, addr rawSockaddrAny, port, flags int32) (int, error) {
+	iovsBuf := make([]iovec, 0, 8)
+	for _, iov := range iovs {
+		iovsBuf = append(iovsBuf, iovec{
+			ptr: uintptr32(uintptr(unsafe.Pointer(unsafe.SliceData(iov)))),
+			len: uint32(len(iov)),
+		})
+	}
+	addrBuf := addressBuffer{
+		buf:    uintptr32(uintptr(unsafe.Pointer(&addr))),
+		bufLen: uint32(unsafe.Sizeof(addr)),
+	}
+	nwritten := int32(0)
+	errno := sock_send_to(
+		int32(fd),
+		unsafe.Pointer(unsafe.SliceData(iovsBuf)),
+		int32(len(iovsBuf)),
+		unsafe.Pointer(&addrBuf),
+		port,
+		flags,
+		unsafe.Pointer(&nwritten),
+	)
+	if errno != 0 {
+		return int(nwritten), errno
+	}
+	runtime.KeepAlive(addrBuf)
+	runtime.KeepAlive(iovsBuf)
+	runtime.KeepAlive(iovs)
+	return int(nwritten), nil
+}
+
+func shutdown(fd, how int) error {
+	if errno := sock_shutdown(int32(fd), int32(how)); errno != 0 {
 		return errno
 	}
 	return nil
@@ -273,15 +376,18 @@ func anyToSockaddr(rsa *rawSockaddrAny, port uint32) (sockaddr, error) {
 		return &addr, nil
 	case AF_UNIX:
 		addr := sockaddrUnix{}
-		n := 0
-		for n < len(rsa.addr) && rsa.addr[n] != 0 {
-			n++
-		}
-		addr.name = string(rsa.addr[:n])
+		addr.name = string(rsa.addr[:strlen(rsa.addr[:])])
 		return &addr, nil
 	default:
 		return nil, syscall.ENOTSUP
 	}
+}
+
+func strlen(b []byte) (n int) {
+	for n < len(b) && b[n] != 0 {
+		n++
+	}
+	return n
 }
 
 // https://github.com/WasmEdge/WasmEdge/blob/434e1fb4690/thirdparty/wasi/api.hpp#L1885

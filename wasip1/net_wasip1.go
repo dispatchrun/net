@@ -3,6 +3,7 @@
 package wasip1
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -110,8 +111,8 @@ func makeConn(c net.Conn) (net.Conn, error) {
 			c = &unixConn{Conn: c}
 		}
 
-		setNetAddr(c.LocalAddr(), addr)
-		setNetAddr(c.RemoteAddr(), peer)
+		setNetAddr(SOCK_STREAM, c.LocalAddr(), addr)
+		setNetAddr(SOCK_STREAM, c.RemoteAddr(), peer)
 	})
 	if err == nil {
 		err = rawConnErr
@@ -123,7 +124,7 @@ func makeConn(c net.Conn) (net.Conn, error) {
 	return c, nil
 }
 
-func setNetAddr(dst net.Addr, src sockaddr) {
+func setNetAddr(sotype int, dst net.Addr, src sockaddr) {
 	switch a := dst.(type) {
 	case *net.IPAddr:
 		a.IP, _ = sockaddrIPAndPort(src)
@@ -132,7 +133,13 @@ func setNetAddr(dst net.Addr, src sockaddr) {
 	case *net.UDPAddr:
 		a.IP, a.Port = sockaddrIPAndPort(src)
 	case *net.UnixAddr:
-		a.Net, a.Name = "unix", sockaddrName(src)
+		switch sotype {
+		case SOCK_STREAM:
+			a.Net = "unix"
+		case SOCK_DGRAM:
+			a.Net = "unixgram"
+		}
+		a.Name = sockaddrName(src)
 	}
 }
 
@@ -154,4 +161,26 @@ func sockaddrIPAndPort(addr sockaddr) (net.IP, int) {
 	default:
 		return nil, 0
 	}
+}
+
+func setNonBlock(fd int) error {
+	if err := syscall.SetNonblock(fd, true); err != nil {
+		return os.NewSyscallError("setnonblock", err)
+	}
+	return nil
+}
+
+func setReuseAddress(fd int) error {
+	if err := setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, 1); err != nil {
+		// The runtime may not support the option; if that's the case and the
+		// address is already in use, binding the socket will fail and we will
+		// report the error then.
+		switch {
+		case errors.Is(err, syscall.ENOPROTOOPT):
+		case errors.Is(err, syscall.EINVAL):
+		default:
+			return os.NewSyscallError("setsockopt", err)
+		}
+	}
+	return nil
 }
