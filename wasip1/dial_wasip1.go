@@ -4,7 +4,6 @@ package wasip1
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -120,28 +119,31 @@ func dialAddr(ctx context.Context, addr net.Addr) (net.Conn, error) {
 	if err != nil {
 		return nil, os.NewSyscallError("socket", err)
 	}
-
-	if err := syscall.SetNonblock(fd, true); err != nil {
-		syscall.Close(fd)
-		return nil, os.NewSyscallError("setnonblock", err)
-	}
-	if sotype == SOCK_DGRAM && proto != AF_UNIX {
-		if err := setsockopt(fd, SOL_SOCKET, SO_BROADCAST, 1); err != nil {
-			// If the system does not support broadcast we should still be able
-			// to use the datagram socket.
-			switch {
-			case errors.Is(err, syscall.EINVAL):
-			case errors.Is(err, syscall.ENOPROTOOPT):
-			default:
-				syscall.Close(fd)
-				return nil, os.NewSyscallError("setsockopt", err)
-			}
+	defer func() {
+		if fd >= 0 {
+			syscall.Close(fd)
 		}
+	}()
+
+	if err := setNonBlock(fd); err != nil {
+		return nil, err
 	}
+	// if sotype == SOCK_DGRAM && proto != AF_UNIX {
+	// 	if err := setsockopt(fd, SOL_SOCKET, SO_BROADCAST, 1); err != nil {
+	// 		// If the system does not support broadcast we should still be able
+	// 		// to use the datagram socket.
+	// 		switch {
+	// 		case errors.Is(err, syscall.EINVAL):
+	// 		case errors.Is(err, syscall.ENOPROTOOPT):
+	// 		default:
+	// 			return nil, os.NewSyscallError("setsockopt", err)
+	// 		}
+	// 	}
+	// }
 
 	connectAddr, err := socketAddress(addr)
 	if err != nil {
-		return nil, os.NewSyscallError("connect", err)
+		return nil, os.NewSyscallError("sockaddr", err)
 	}
 	var inProgress bool
 	switch err := connect(fd, connectAddr); err {
@@ -149,11 +151,25 @@ func dialAddr(ctx context.Context, addr net.Addr) (net.Conn, error) {
 	case syscall.EINPROGRESS:
 		inProgress = true
 	default:
-		syscall.Close(fd)
 		return nil, os.NewSyscallError("connect", err)
 	}
 
+	if sotype == SOCK_DGRAM {
+		name, err := getsockname(fd)
+		if err != nil {
+			return nil, err
+		}
+		peer, err := getpeername(fd)
+		if err != nil {
+			return nil, err
+		}
+		f := os.NewFile(uintptr(fd), "")
+		fd = -1
+		return makePacketConn(f, name, peer), nil
+	}
+
 	f := os.NewFile(uintptr(fd), "")
+	fd = -1 // now the *os.File owns the file descriptor
 	defer f.Close()
 
 	if inProgress {
