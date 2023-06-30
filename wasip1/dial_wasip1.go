@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+func init() {
+	net.DefaultResolver.Dial = DialContext
+}
+
 // Dialer is a type similar to net.Dialer but it uses the dial functions defined
 // in this package instead of those from the standard library.
 //

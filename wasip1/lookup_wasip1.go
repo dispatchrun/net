@@ -7,10 +7,6 @@ import (
 	"net"
 )
 
-func init() {
-	net.DefaultResolver.Dial = DialContext
-}
-
 func lookupAddr(ctx context.Context, op, network, address string) ([]net.Addr, error) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
