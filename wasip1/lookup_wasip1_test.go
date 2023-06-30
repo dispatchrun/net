@@ -128,6 +128,8 @@ func TestLookupAddr(t *testing.T) {
 func assertEqualAllAddrs(t *testing.T, addrs1, addrs2 []net.Addr) {
 	if len(addrs1) != len(addrs2) {
 		t.Errorf("number of addresses mismatch: %d != %d", len(addrs1), len(addrs2))
+		t.Logf("   got: %v", addrs1)
+		t.Logf("expect: %v", addrs2)
 	} else {
 		for i := range addrs1 {
 			assertEqualAddr(t, addrs1[i], addrs2[i])
