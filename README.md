@@ -107,36 +107,27 @@ work since they are hardcoded to depend on the standard `net` package.
 There are two methods available for resolving a set of IP addresses for a
 hostname.
 
-### getaddrinfo
-
-The `sock_getaddrinfo` host function is used to implement name resolution.
-
-When using this method, the standard library resolver **will not work**. You
-cannot use `net.DefaultResolver`, `net.LookupIP`, etc. with this approach
-because the standard library does not allow us to patch it with an alternative
-implementation.
-
-Note that `sock_getaddrinfo` may block.
-
-At this time, this is this package defaults to using this approach.
-
 ### Pure Go Resolver
 
-The pure Go name resolver is not currently enabled for `GOOS=wasip1`.
+The pure Go name resolver is the default for `GOOS=wasip1`.
 
-The following series of CLs will change this: https://go-review.googlesource.com/c/go/+/500579.
-This will hopefully land in Go v1.22 in ~February 2024.
-
-If you're using a version of Go that has the CL's included, you can
-instruct this library to use the pure Go resolver by including the
-`purego` build tag.
-
-The library will then automatically configure the `net.DefaultResolver`.
 All you need is the following import somewhere in your application:
 
 ```go
 import _ "github.com/stealthrocket/net/wasip1"
 ```
 
-You should then be able to use the lookup functions from the standard
+The library will then automatically configure the `net.DefaultResolver`.
+
+You'll then be able to use the lookup functions from the standard
 library (e.g. `net.LookupIP(host)`).
+
+### getaddrinfo
+
+The `sock_getaddrinfo` host function is used to implement name resolution.
+To use this method, compile the library with the `getaddrinfo` build tag.
+
+When using this method, the standard library resolver **will not work**; you
+cannot use `net.DefaultResolver`, `net.LookupIP`, etc.
+
+Note that `sock_getaddrinfo` may block.
