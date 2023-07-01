@@ -30,8 +30,12 @@ func lookupAddr(ctx context.Context, op, network, address string) ([]net.Addr, e
 	if hostname == "" {
 		if op == "listen" {
 			switch network {
+			case "udp", "udp4":
+				return []net.Addr{&net.UDPAddr{IP: net.IPv4zero, Port: port}}, nil
 			case "tcp", "tcp4":
 				return []net.Addr{&net.TCPAddr{IP: net.IPv4zero, Port: port}}, nil
+			case "udp6":
+				return []net.Addr{&net.UDPAddr{IP: net.IPv6zero, Port: port}}, nil
 			case "tcp6":
 				return []net.Addr{&net.TCPAddr{IP: net.IPv6zero, Port: port}}, nil
 			}
