@@ -8,7 +8,7 @@ This library provides `net.Dial` and `net.Listen` functions for
 [`GOOS=wasip1`][wasip1].
 
 Applications built with this library are compatible with [WasmEdge][wasmedge]
-and [stealthrocket/wasi-go][wasi-go] such as [Timecraft][timecraft].
+and [wasi-go][wasi-go] such as [Timecraft][timecraft].
 
 [gotip]:     https://pkg.go.dev/golang.org/dl/gotip
 [timecraft]: https://github.com/stealthrocket/timecraft
