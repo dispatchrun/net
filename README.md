@@ -73,7 +73,7 @@ client := redis.NewClient(&redis.Options{
 ## Listening
 
 Network servers can be created using the `wasip1.Listen` function, which mimics
-the signature of `net.Listen` but uses WASI socket extensiosn to create the
+the signature of `net.Listen` but uses WASI socket extensions to create the
 `net.Listener`.
 
 For example, a program compiled to `GOOS=wasip1` can create a http server by
