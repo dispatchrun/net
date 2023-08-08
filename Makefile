@@ -4,7 +4,7 @@ GO ?= gotip
 GOPATH ?= $(shell $(GO) env GOPATH)
 wasirun = $(GOPATH)/bin/wasirun
 
-packages.dir = $(filter-out testdata/,$(wildcard */))
+packages.dir = $(filter-out examples/,$(filter-out testdata/,$(wildcard */)))
 packages.test = $(packages.dir:/=.test)
 test: proto wasirun $(packages.test)
 	@for pkg in $(packages.test); do \
