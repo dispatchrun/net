@@ -1,6 +1,6 @@
 module github.com/stealthrocket/net/websocket
 
-go 1.20
+go 1.21
 
 require (
 	github.com/klauspost/compress v1.10.3 // indirect
