@@ -27,10 +27,4 @@ jobs:
       with:
         services: |
           redis
-    - name: Install Go tip
-      run: |
-        curl -sL https://storage.googleapis.com/go-build-snap/go/linux-amd64/$(git ls-remote https://github.com/golang/go.git HEAD | awk '{print $1;}').tar.gz -o gotip.tar.gz
-        ls -lah gotip.tar.gz
-        mkdir -p $HOME/gotip
-        tar -C $HOME/gotip -xzf gotip.tar.gz
-    - run: make test GO=$HOME/gotip/bin/go GOPATH=$HOME/gotip
+    - run: make test
