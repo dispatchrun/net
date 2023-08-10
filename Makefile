@@ -1,6 +1,6 @@
 .PHONY: clean proto test lint wasirun
 
-GO ?= gotip
+GO ?= go
 GOPATH ?= $(shell $(GO) env GOPATH)
 wasirun = $(GOPATH)/bin/wasirun
 

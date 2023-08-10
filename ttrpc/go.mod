@@ -1,6 +1,6 @@
 module github.com/stealthrocket/net/ttrpc
 
-go 1.20
+go 1.21
 
 require (
 	github.com/containerd/ttrpc v1.2.2

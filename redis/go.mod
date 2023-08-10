@@ -1,6 +1,6 @@
 module github.com/stealthrocket/net/redis
 
-go 1.20
+go 1.21
 
 require (
 	github.com/redis/go-redis/v9 v9.0.5
