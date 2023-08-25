@@ -13,3 +13,5 @@
 // When compiling to other targets than GOOS=wasip1, importing this package has
 // no effect.
 package mysql
+
+import _ "github.com/go-sql-driver/mysql"
