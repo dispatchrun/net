@@ -9,9 +9,9 @@ require (
 )
 
 require (
-	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af // indirect
-	golang.org/x/sys v0.1.0 // indirect
-	google.golang.org/genproto v0.0.0-20200224152610-e50cd9704f63 // indirect
-	google.golang.org/grpc v1.27.1 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/grpc v1.56.3 // indirect
 )
