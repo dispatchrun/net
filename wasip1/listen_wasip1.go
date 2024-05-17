@@ -44,9 +44,33 @@ func ListenPacket(network, address string) (net.PacketConn, error) {
 		addr := &netAddr{network, address}
 		return nil, listenErr(addr, err)
 	}
-	conn, err := listenPacketAddr(addrs[0])
+	conn, err := listenPacketAddr(addrs[0], nil)
 	if err != nil {
 		return nil, listenErr(addrs[0], err)
+	}
+	return conn, nil
+}
+
+// DialUDP connects to the remote UDP network address from the local UDP network address.
+func DialUDP(network, localAddr, remoteAddr string) (net.PacketConn, error) {
+	switch network {
+	case "udp", "udp4", "udp6":
+	default:
+		return nil, unsupportedNetwork(network, localAddr)
+	}
+	laddrs, err := lookupAddr(context.Background(), "listen", network, localAddr)
+	if err != nil {
+		addr := &netAddr{network, localAddr}
+		return nil, listenErr(addr, err)
+	}
+	raddrs, err := lookupAddr(context.Background(), "dial", network, remoteAddr)
+	if err != nil {
+		addr := &netAddr{network, localAddr}
+		return nil, dialErr(addr, err)
+	}
+	conn, err := listenPacketAddr(laddrs[0], raddrs[0])
+	if err != nil {
+		return nil, listenErr(laddrs[0], err)
 	}
 	return conn, nil
 }
@@ -105,7 +129,8 @@ func listenAddr(addr net.Addr) (net.Listener, error) {
 	return makeListener(l, name), nil
 }
 
-func listenPacketAddr(addr net.Addr) (net.PacketConn, error) {
+// If remoteAddr is set, the socket will be connected to that address.
+func listenPacketAddr(addr net.Addr, remoteAddr net.Addr) (net.PacketConn, error) {
 	fd, err := socket(family(addr), SOCK_DGRAM, 0)
 	if err != nil {
 		return nil, os.NewSyscallError("socket", err)
@@ -129,6 +154,16 @@ func listenPacketAddr(addr net.Addr) (net.PacketConn, error) {
 	}
 	if err := bind(fd, bindAddr); err != nil {
 		return nil, os.NewSyscallError("bind", err)
+	}
+
+	if remoteAddr != nil {
+		remoteSockAddr, err := socketAddress(remoteAddr)
+		if err != nil {
+			return nil, os.NewSyscallError("connect", err)
+		}
+		if err := connect(fd, remoteSockAddr); err != nil {
+			return nil, os.NewSyscallError("connect", err)
+		}
 	}
 
 	name, err := getsockname(fd)
