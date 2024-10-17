@@ -15,7 +15,6 @@ func main() {
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Hello, World!"))
-			w.WriteHeader(http.StatusOK)
 		}),
 	}
 
